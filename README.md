@@ -1,4 +1,4 @@
-# TeaLog
+# MateLog
 
 Assistant d'infusion brutaliste, fichier unique. Calcule le temps d'attente pour que l'eau bouillie refroidisse jusqu'a la temperature cible de ton the (loi de Newton), puis lance le timer d'infusion.
 
