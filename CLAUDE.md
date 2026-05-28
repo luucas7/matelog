@@ -1,4 +1,4 @@
-# TeaLog
+# MateLog (formerly TeaLog)
 
 A single-file brutalist tea brewing assistant. Predicts how long boiled water needs to cool in an open kettle before reaching a tea's target steeping temperature, then runs the steeping timer. Built for a specific user with specific preferences. This document captures everything a future Claude session needs to continue the project without redoing the requirements interview.
 
@@ -88,12 +88,14 @@ To add a category, append an object to `CATEGORIES`. To change which categories 
 ## File structure
 
 ```
-TeaLog/
+matelog/
   index.html      Single-file app, contains HTML + CSS + JS inline
   favicon.svg     Brutalist mug icon (32x32 SVG, monochrome)
   CLAUDE.md       This file
   README.md       Short user-facing summary
 ```
+
+The project was previously called TeaLog. It was renamed to MateLog (UI shown as `MATE.LOG`) when the user moved the repo to `github.com/luucas7/matelog` and started serving it at `https://luucas7.github.io/matelog/`. A one-shot migration in `index.html` copies any pre-existing `tealog.*` localStorage entries to `matelog.*` and removes the old keys; the migration block is idempotent and safe to leave in indefinitely.
 
 No build step. No package.json. No dependencies installed locally. The only external resource is Google Fonts (JetBrains Mono), loaded over the network. The app degrades gracefully to a system monospace if Google Fonts is unreachable.
 
@@ -117,10 +119,12 @@ Single-file SPA. State is held in module-level variables. Views are `<main>` ele
 ### Persistence
 
 `localStorage` with four keys:
-- `tealog.settings`: `{ ambientTemp, kettleDiameter, alpha, defaultContainerId, lastVolume }`
-- `tealog.containers`: `[{ id, name, volume }]`
-- `tealog.customTeas`: `[{ id, name, categoryId, temp, time, dose, notes }]`
-- `tealog.history`: `[{ id, teaKey, teaName, categoryId, temp, time, volume, rating, at }]` newest first, capped at 500. `rating` is one of `bitter` / `perfect` / `flat`. `teaKey` is `kind:id` (e.g. `category:green`, `custom:tea_...`) and is the grouping key for analysis.
+- `matelog.settings`: `{ ambientTemp, kettleDiameter, alpha, defaultContainerId, lastVolume }`
+- `matelog.containers`: `[{ id, name, volume }]`
+- `matelog.customTeas`: `[{ id, name, categoryId, temp, time, dose, notes }]`
+- `matelog.history`: `[{ id, teaKey, teaName, categoryId, temp, time, volume, rating, at }]` newest first, capped at 500. `rating` is one of `bitter` / `perfect` / `flat`. `teaKey` is `kind:id` (e.g. `category:green`, `custom:tea_...`) and is the grouping key for analysis.
+
+Legacy keys `tealog.*` are automatically migrated to `matelog.*` on first load by the `migrateLegacyKeys` IIFE near the top of `index.html`.
 
 Legacy custom teas saved before the `dose` field exists are tolerated: `resolveDose(tea)` falls back to the tea's category dose, then to 2.0 g/100mL.
 

@@ -1,9 +1,52 @@
+# Claude Code local config (not shared)
+.claude/
+settings.local.json
+
+# OS-specific
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.orig
+
+# Secrets and env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local backup exports the app may produce
+tealog-*.json
+matelog-*.json
+
+# Node (defensive, no build step currently)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # For projects that use the Waf build system: https://waf.io/
-# Dot-hidden on Unix-like systems
 .waf-*-*/
 .waf3-*-*/
-# Hidden directory on Windows (no dot)
 waf-*-*/
 waf3-*-*/
-# Lockfile
 .lock-waf_*_build

@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a0a">
-<title>TEA.LOG</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>MATE.LOG</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -443,7 +443,7 @@
 <body>
 
 <header>
-  <div class="logo">TEA.LOG<span class="blink"></span></div>
+  <div class="logo">MATE.LOG<span class="blink"></span></div>
   <div class="meta">
     <div id="metaAmb">AMB ~20&deg;C</div>
     <div id="metaContainer">--</div>
@@ -781,7 +781,7 @@
   <div class="section">
     <div class="section-label">A PROPOS</div>
     <div style="font-size:13px; line-height:1.6;">
-      <p><b>TEA.LOG</b> calcule le temps d'attente pour que l'eau bouillie atteigne la temperature cible de ton the, en utilisant la loi de refroidissement de Newton.</p>
+      <p><b>MATE.LOG</b> calcule le temps d'attente pour que l'eau bouillie atteigne la temperature cible de ton the, en utilisant la loi de refroidissement de Newton.</p>
       <br>
       <p>Formule appliquee:</p>
       <p style="color:var(--fg-dim); font-size:12px;">T(t) = Tamb + (T0 - Tamb) &middot; exp(-k&middot;t)<br>k = alpha &middot; D&sup2; / V</p>
@@ -852,11 +852,34 @@ const DEFAULT_CONTAINERS = [
 ];
 
 const STORE_KEYS = {
-  settings:    'tealog.settings',
-  containers:  'tealog.containers',
-  customTeas:  'tealog.customTeas',
-  history:     'tealog.history',
+  settings:    'matelog.settings',
+  containers:  'matelog.containers',
+  customTeas:  'matelog.customTeas',
+  history:     'matelog.history',
 };
+
+// One-shot migration: data was stored under 'tealog.*' keys before the rename.
+// Move any legacy entries over and clear the old ones so localStorage stays tidy.
+// Safe to keep running indefinitely (no-op once migration is done).
+(function migrateLegacyKeys() {
+  const legacy = {
+    'tealog.settings':    STORE_KEYS.settings,
+    'tealog.containers':  STORE_KEYS.containers,
+    'tealog.customTeas':  STORE_KEYS.customTeas,
+    'tealog.history':     STORE_KEYS.history,
+  };
+  try {
+    Object.keys(legacy).forEach(oldKey => {
+      const raw = localStorage.getItem(oldKey);
+      if (raw !== null) {
+        if (localStorage.getItem(legacy[oldKey]) === null) {
+          localStorage.setItem(legacy[oldKey], raw);
+        }
+        localStorage.removeItem(oldKey);
+      }
+    });
+  } catch (e) { /* localStorage unavailable, nothing to migrate */ }
+})();
 
 // Storage helpers tolerant to localStorage unavailability (Claude.ai sandbox)
 const memStore = {};
@@ -1247,7 +1270,7 @@ function alarm() {
   // PC-friendly visual: title bar flashing (always on, no permission needed)
   startTitleFlash('TEMPS ECOULE');
   // PC-friendly system notification (opt-in, see settings)
-  systemNotify('TEA.LOG', currentBrew ? currentBrew.tea.name + ' : temps ecoule' : 'Temps ecoule');
+  systemNotify('MATE.LOG', currentBrew ? currentBrew.tea.name + ' : temps ecoule' : 'Temps ecoule');
 }
 
 /* ---------- TAB TITLE FLASH ---------- */
@@ -1277,7 +1300,7 @@ function systemNotify(title, body) {
     const n = new Notification(title, {
       body: body,
       icon: 'favicon.svg',
-      tag: 'tealog-timer',       // collapse repeats
+      tag: 'matelog-timer',      // collapse repeats
       requireInteraction: true,  // stays until user dismisses
     });
     n.onclick = () => { try { window.focus(); } catch(e){} n.close(); };
@@ -1650,7 +1673,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'tealog-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'matelog-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -1667,7 +1690,7 @@ function importData(file) {
     }
     if (!data || typeof data !== 'object' ||
         (!data.settings && !data.containers && !data.customTeas && !data.history)) {
-      alert('Fichier non reconnu : aucune donnee TeaLog trouvee.');
+      alert('Fichier non reconnu : aucune donnee MateLog trouvee.');
       return;
     }
     if (!confirm('Importer ce fichier ecrasera tes donnees actuelles. Continuer ?')) return;
