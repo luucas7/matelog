@@ -1058,7 +1058,7 @@ function renderHome() {
   toggle.style.cssText = 'color:var(--fg-dim); justify-content:center; grid-template-columns:1fr; text-align:center;';
   const hidden = sorted.length - filtered.length;
   toggle.innerHTML = '<div class="tea-name" style="text-align:center; font-weight:400; font-size:12px; letter-spacing:0.1em;">' +
-    (showAll ? '\u2014 RESERRER \u2014' : '+ AFFICHER TOUTES LES CATEGORIES (' + hidden + ' DE PLUS)') +
+    (showAll ? '- RESERRER -' : '+ AFFICHER TOUTES LES CATEGORIES (' + hidden + ' DE PLUS)') +
     '</div>';
   toggle.addEventListener('click', () => {
     homeState.showAllCategories = !homeState.showAllCategories;
@@ -1298,7 +1298,7 @@ function systemNotify(title, body) {
   try {
     const n = new Notification(title, {
       body: body,
-      icon: 'favicon.svg',
+      icon: 'favicon.png',
       tag: 'honedtea-timer',     // collapse repeats
       requireInteraction: true,  // stays until user dismisses
     });
