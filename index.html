@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<title>TEA.LOG</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* RESET */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; text-align: left; }
+  input, textarea, select { font: inherit; color: inherit; background: none; border: none; outline: none; }
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  :root {
+    --bg: #0a0a0a;
+    --bg-elev: #131313;
+    --fg: #e8e3d3;
+    --fg-dim: #8a8478;
+    --border: #2a2a2a;
+    --border-strong: #e8e3d3;
+    --cool: #6ab8ff;   /* refroidissement */
+    --warm: #ff8c42;   /* infusion */
+    --alert: #ff3a3a;  /* alarme */
+    --line: 2px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    padding: 16px;
+    padding-bottom: 80px;
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* SCANLINES subtiles (CRT vibe) */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(255,255,255,0.012) 2px,
+      rgba(255,255,255,0.012) 3px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: var(--line) solid var(--fg);
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .logo {
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+  }
+  .logo .blink {
+    display: inline-block;
+    width: 9px;
+    height: 14px;
+    background: var(--fg);
+    margin-left: 4px;
+    vertical-align: -2px;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .meta {
+    font-size: 11px;
+    color: var(--fg-dim);
+    text-align: right;
+  }
+
+  /* SECTIONS */
+  .section { margin-bottom: 24px; }
+  .section-label {
+    font-size: 11px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* LISTE BOUTONS THES */
+  .tea-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border: var(--line) solid var(--fg);
+  }
+  .tea-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    transition: background 0.08s;
+  }
+  .tea-item:last-child { border-bottom: none; }
+  .tea-item:active { background: var(--fg); color: var(--bg); }
+  .tea-item:active .tea-spec { color: var(--bg); }
+  .tea-name {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+  .tea-name .marker { color: var(--fg-dim); margin-right: 8px; }
+  .tea-item:active .tea-name .marker { color: var(--bg); }
+  .tea-spec {
+    font-size: 11px;
+    color: var(--fg-dim);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .tea-arrow {
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  /* CUSTOM TEAS */
+  .custom-tea {
+    background: var(--bg-elev);
+  }
+  .custom-tea-actions {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid var(--border);
+  }
+  .custom-tea-actions button {
+    flex: 1;
+    padding: 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-dim);
+    border-right: 1px solid var(--border);
+  }
+  .custom-tea-actions button:last-child { border-right: none; }
+  .custom-tea-actions button:active { background: var(--fg); color: var(--bg); }
+
+  /* BUTTONS */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px 16px;
+    border: var(--line) solid var(--fg);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 14px;
+    background: var(--bg);
+    transition: transform 0.06s;
+  }
+  .btn:active { transform: translate(2px, 2px); background: var(--fg); color: var(--bg); }
+  .btn.ghost { border-color: var(--border); color: var(--fg-dim); }
+  .btn.ghost:active { background: var(--border); color: var(--fg); }
+  .btn.cool { border-color: var(--cool); color: var(--cool); }
+  .btn.cool:active { background: var(--cool); color: var(--bg); }
+  .btn.warm { border-color: var(--warm); color: var(--warm); }
+  .btn.warm:active { background: var(--warm); color: var(--bg); }
+  .btn.alert { border-color: var(--alert); color: var(--alert); }
+  .btn.alert:active { background: var(--alert); color: var(--bg); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  /* INPUTS */
+  .field {
+    display: block;
+    margin-bottom: 12px;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea, .field select {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: var(--line) solid var(--border);
+    background: var(--bg-elev);
+    color: var(--fg);
+    font-size: 14px;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    border-color: var(--fg);
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .slider-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+  .slider-row input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border: none;
+    padding: 0;
+  }
+  .slider-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    background: var(--fg);
+    border: 2px solid var(--bg);
+    cursor: pointer;
+  }
+  .slider-val {
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  /* TIMER SCREENS */
+  .timer-screen {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .timer-phase {
+    font-size: 12px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 4px;
+  }
+  .timer-tea {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+  }
+  .timer-display {
+    font-size: 96px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    margin: 24px 0;
+  }
+  .timer-cool .timer-display { color: var(--cool); }
+  .timer-warm .timer-display { color: var(--warm); }
+  .timer-temp {
+    font-size: 14px;
+    color: var(--fg-dim);
+    margin-bottom: 24px;
+  }
+  .timer-temp .now {
+    color: var(--fg);
+    font-weight: 700;
+  }
+  .timer-progress {
+    height: 6px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    margin: 20px 0;
+    overflow: hidden;
+  }
+  .timer-progress-fill {
+    height: 100%;
+    background: var(--fg);
+    width: 0%;
+    transition: width 0.5s linear;
+  }
+  .timer-cool .timer-progress-fill { background: var(--cool); }
+  .timer-warm .timer-progress-fill { background: var(--warm); }
+
+  /* DONE SCREEN */
+  .done {
+    text-align: center;
+    padding: 60px 0;
+  }
+  .done-mark {
+    font-size: 64px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--fg);
+  }
+  .done-text {
+    font-size: 14px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 32px;
+  }
+
+  /* MODAL / OVERLAY */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+  }
+  .overlay-inner {
+    background: var(--bg);
+    border: var(--line) solid var(--fg);
+    padding: 20px;
+    width: 100%;
+    max-width: 608px;
+    margin: 0 auto;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .overlay-title {
+    font-weight: 800;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .overlay-close {
+    font-size: 18px;
+    font-weight: 700;
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .overlay-close:active { background: var(--fg); color: var(--bg); }
+
+  /* CONTAINER LIST */
+  .container-list { margin-bottom: 16px; }
+  .container-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .container-item.active {
+    border-color: var(--fg);
+    border-width: var(--line);
+  }
+  .container-item .ci-name { font-weight: 700; }
+  .container-item .ci-vol { color: var(--fg-dim); font-size: 12px; }
+  .container-item .ci-del {
+    font-size: 12px;
+    color: var(--alert);
+    padding: 4px 8px;
+    border: 1px solid var(--alert);
+  }
+  .container-item .ci-del:active { background: var(--alert); color: var(--bg); }
+
+  /* INFO BOX */
+  .info {
+    border-left: 3px solid var(--fg-dim);
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--fg-dim);
+  }
+  .info b { color: var(--fg); }
+
+  /* HIDDEN HELPER */
+  .hidden { display: none !important; }
+
+  /* AVAILABLE TEMP DISPLAY */
+  .target-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    border: var(--line) solid var(--border);
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  .target-row .lbl {
+    font-size: 10px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+  }
+  .target-row .val {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ASCII DECORATION */
+  .ascii {
+    font-size: 10px;
+    color: var(--fg-dim);
+    white-space: pre;
+    line-height: 1.1;
+    margin: 12px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TEA.LOG<span class="blink"></span></div>
+  <div class="meta">
+    <div id="metaAmb">AMB ~20&deg;C</div>
+    <div id="metaContainer">--</div>
+  </div>
+</header>
+
+<!-- =========== HOME =========== -->
+<main id="view-home">
+  <div class="section">
+    <div class="section-label">CATEGORIES STANDARD</div>
+    <div class="tea-list" id="categoriesList"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">MES THES</div>
+    <div class="tea-list" id="customTeasList"></div>
+    <button class="btn ghost" id="btnAddTea" style="margin-top:8px">+ AJOUTER UN THE PERSO</button>
+  </div>
+
+  <div class="section">
+    <button class="btn ghost" id="btnHistory" style="margin-bottom:8px">HISTORIQUE</button>
+    <div class="btn-row">
+      <button class="btn ghost" id="btnSettings">PARAMETRES</button>
+      <button class="btn ghost" id="btnAbout">A PROPOS</button>
+    </div>
+  </div>
+</main>
+
+<!-- =========== SETUP =========== -->
+<main id="view-setup" class="hidden">
+  <button class="btn ghost" id="btnBackSetup" style="margin-bottom:16px">&lt; RETOUR</button>
+
+  <div class="section">
+    <div class="section-label">PREPARATION</div>
+    <div id="setupTeaInfo" style="font-size:18px; font-weight:700; margin-bottom:4px;"></div>
+    <div id="setupTeaSubInfo" style="font-size:12px; color:var(--fg-dim); margin-bottom:16px;"></div>
+
+    <div class="target-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div>
+        <div class="lbl">CIBLE</div>
+        <div class="val"><span id="setupTemp">--</span>&deg;C</div>
+      </div>
+      <div>
+        <div class="lbl">INFUSION</div>
+        <div class="val"><span id="setupTime">--</span></div>
+      </div>
+      <div>
+        <div class="lbl">FEUILLES</div>
+        <div class="val"><span id="setupDose">--</span>G</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>CONTENANT</label>
+      <select id="setupContainer"></select>
+    </div>
+
+    <div class="field">
+      <label>VOLUME D'EAU A BOUILLIR (ML)</label>
+      <input type="number" id="setupVolume" min="50" max="3000" step="10">
+      <div style="font-size:11px; color:var(--fg-dim); margin-top:4px;">
+        DOSAGE <span id="setupDoseRate">--</span> G / 100 ML &middot; la quantite de feuilles suit le volume.
+      </div>
+    </div>
+
+    <div class="info">
+      <b>ESTIMATION:</b> attente bouilloire <b><span id="estCool">--</span></b>
+      pour passer de 100&deg;C &agrave; <span id="estTarget">--</span>&deg;C
+      (ambiante <span id="estAmb">--</span>&deg;C, ouverture <span id="estDiam">--</span>cm).
+    </div>
+
+    <button class="btn" id="btnStart">DEMARRER</button>
+  </div>
+
+  <div class="section" id="setupNotesSection">
+    <div class="section-label">NOTES</div>
+    <div id="setupNotes" style="font-size:13px; white-space:pre-wrap;"></div>
+  </div>
+</main>
+
+<!-- =========== COOLING TIMER =========== -->
+<main id="view-cooling" class="hidden">
+  <div class="timer-screen timer-cool">
+    <div class="timer-phase">[01/02] REFROIDISSEMENT BOUILLOIRE</div>
+    <div class="timer-tea" id="coolTeaName">--</div>
+    <div class="timer-display" id="coolDisplay">--:--</div>
+    <div class="timer-temp">
+      ESTIME: <span class="now" id="coolNowTemp">--</span>&deg;C <span style="color:var(--border-strong);">/</span> CIBLE <span id="coolTargetTemp">--</span>&deg;C
+    </div>
+    <div class="timer-progress"><div class="timer-progress-fill" id="coolProgress"></div></div>
+    <div class="ascii" id="coolAscii"></div>
+    <div class="btn-row-3" style="margin-top:24px;">
+      <button class="btn ghost" id="btnCoolMinus">-30S</button>
+      <button class="btn alert" id="btnCoolAbort">STOP</button>
+      <button class="btn cool" id="btnCoolSkip">PRET</button>
+    </div>
+    <div class="info" style="margin-top:24px;">
+      Verse l'eau quand le timer atteint zero. La cible est une estimation. Si tu as un thermometre, fie-toi a lui via PRET.
+    </div>
+  </div>
+</main>
+
+<!-- =========== STEEPING TIMER =========== -->
+<main id="view-steeping" class="hidden">
+  <div class="timer-screen timer-warm">
+    <div class="timer-phase">[02/02] INFUSION EN COURS</div>
+    <div class="timer-tea" id="steepTeaName">--</div>
+    <div class="timer-display" id="steepDisplay">--:--</div>
+    <div class="timer-temp">
+      INFUSE A <span class="now" id="steepTemp">--</span>&deg;C
+    </div>
+    <div class="timer-progress"><div class="timer-progress-fill" id="steepProgress"></div></div>
+    <div class="btn-row-3" style="margin-top:24px;">
+      <button class="btn ghost" id="btnSteepMinus">-15S</button>
+      <button class="btn alert" id="btnSteepAbort">STOP</button>
+      <button class="btn warm" id="btnSteepDone">FINI</button>
+    </div>
+  </div>
+</main>
+
+<!-- =========== DONE =========== -->
+<main id="view-done" class="hidden">
+  <div class="done">
+    <div class="done-mark">// PRET //</div>
+    <div class="done-text">Comment etait cette infusion ?</div>
+    <div class="btn-row-3" style="margin-bottom:12px;">
+      <button class="btn cool" id="btnRateBitter">TROP<br>AMER</button>
+      <button class="btn" id="btnRatePerfect">PARFAIT</button>
+      <button class="btn warm" id="btnRateFlat">FADE</button>
+    </div>
+    <div style="font-size:11px; color:var(--fg-dim); margin-bottom:24px; line-height:1.5;">
+      AMER = eau trop chaude (baisse alpha/temps) &middot; FADE = eau trop froide (monte alpha/temps).
+    </div>
+    <button class="btn ghost" id="btnDoneHome">PASSER, RETOUR ACCUEIL</button>
+  </div>
+</main>
+
+<!-- =========== SETTINGS =========== -->
+<main id="view-settings" class="hidden">
+  <button class="btn ghost" id="btnBackSettings" style="margin-bottom:16px">&lt; RETOUR</button>
+
+  <div class="section">
+    <div class="section-label">ENVIRONNEMENT</div>
+    <div class="field">
+      <label>TEMPERATURE AMBIANTE</label>
+      <div class="slider-row">
+        <input type="range" id="settingAmb" min="5" max="35" step="1">
+        <div class="slider-val"><span id="settingAmbVal">--</span>&deg;C</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">BOUILLOIRE</div>
+    <div class="field">
+      <label>DIAMETRE D'OUVERTURE (CM)</label>
+      <div class="slider-row">
+        <input type="range" id="settingDiam" min="4" max="20" step="0.5">
+        <div class="slider-val"><span id="settingDiamVal">--</span>CM</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>FACTEUR DE CALIBRATION (ALPHA)</label>
+      <div class="slider-row">
+        <input type="range" id="settingAlpha" min="0.003" max="0.025" step="0.001">
+        <div class="slider-val"><span id="settingAlphaVal">--</span></div>
+      </div>
+      <div style="font-size:11px; color:var(--fg-dim); margin-top:4px;">
+        Plus alpha est haut, plus l'app pense que ton eau refroidit vite.
+        Inconnu a priori : utilise la calibration ci-dessous.
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">CALIBRATION</div>
+    <button class="btn" id="btnGoCalibrate">CALIBRER ALPHA &gt;</button>
+    <div style="font-size:11px; color:var(--fg-dim); margin-top:8px;">
+      Calcule alpha precisement avec une seule mesure (thermometre requis).
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">CONTENANTS</div>
+    <div class="container-list" id="containerList"></div>
+    <div class="field-row">
+      <input type="text" id="newContainerName" placeholder="NOM (EX: TASSE)">
+      <input type="number" id="newContainerVol" placeholder="VOLUME ML">
+    </div>
+    <button class="btn ghost" id="btnAddContainer" style="margin-top:8px">+ AJOUTER</button>
+  </div>
+
+  <div class="section">
+    <div class="section-label">NOTIFICATIONS</div>
+    <div style="font-size:12px; color:var(--fg-dim); margin-bottom:8px;">
+      ETAT : <span id="notifStatus" style="color:var(--fg);">--</span>
+    </div>
+    <button class="btn ghost" id="btnNotifAsk">AUTORISER NOTIFICATIONS SYSTEME</button>
+    <div style="font-size:11px; color:var(--fg-dim); margin-top:8px; line-height:1.5;">
+      Notif systeme visible meme onglet en arriere-plan (utile sur PC). Sur file:// Chrome refuse, Firefox accepte. Le titre d'onglet clignote aussi (sans permission).
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">DONNEES</div>
+    <div class="btn-row" style="margin-bottom:8px;">
+      <button class="btn ghost" id="btnExport">EXPORT JSON</button>
+      <button class="btn ghost" id="btnImport">IMPORT JSON</button>
+    </div>
+    <button class="btn alert" id="btnReset">RESET TOTAL</button>
+    <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+    <div style="font-size:11px; color:var(--fg-dim); margin-top:8px;">
+      L'import ecrase tes donnees actuelles avec le contenu du fichier (backup, changement de telephone).
+    </div>
+  </div>
+</main>
+
+<!-- =========== CALIBRATION =========== -->
+<main id="view-calibration" class="hidden">
+  <button class="btn ghost" id="btnBackCalibration" style="margin-bottom:16px">&lt; RETOUR PARAMETRES</button>
+
+  <div class="section">
+    <div class="section-label">CALIBRATION ALPHA</div>
+    <div style="font-size:13px; line-height:1.5; margin-bottom:16px;">
+      <p>Alpha ne se calcule pas a priori, il depend de ton materiel. Cette page determine ta valeur exacte a partir d'une <b>seule mesure</b> au thermometre.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">PROTOCOLE</div>
+    <div style="font-size:13px; line-height:1.6;">
+      <p><b>01.</b> Fais bouillir un volume connu d'eau dans ta bouilloire (ex: 500mL).</p>
+      <br>
+      <p><b>02.</b> Des que l'eau bout, eteins, ouvre le couvercle, demarre un chrono.</p>
+      <br>
+      <p><b>03.</b> Attends un temps connu, par exemple 5 minutes.</p>
+      <br>
+      <p><b>04.</b> Plonge un thermometre culinaire dans l'eau, releve la temperature.</p>
+      <br>
+      <p><b>05.</b> Saisis les trois valeurs ci-dessous.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">PARAMETRES ACTUELS</div>
+    <div class="target-row">
+      <div>
+        <div class="lbl">AMBIANTE</div>
+        <div class="val"><span id="calCurrentAmb">--</span>&deg;C</div>
+      </div>
+      <div>
+        <div class="lbl">DIAMETRE</div>
+        <div class="val"><span id="calCurrentDiam">--</span>CM</div>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--fg-dim); margin-top:-8px; margin-bottom:16px;">
+      Si ces valeurs sont fausses, le calcul d'alpha sera fausse. Reviens dans PARAMETRES pour corriger.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">MESURE</div>
+    <div class="field">
+      <label>VOLUME BOUILLI (ML)</label>
+      <input type="number" id="calVolume" min="50" max="3000" step="10" placeholder="500">
+    </div>
+    <div class="field-row">
+      <div class="field" style="margin:0;">
+        <label>TEMPS ECOULE (MM:SS)</label>
+        <input type="text" id="calTime" placeholder="05:00">
+      </div>
+      <div class="field" style="margin:0;">
+        <label>TEMP MESUREE (&deg;C)</label>
+        <input type="number" id="calTemp" min="20" max="99" placeholder="82">
+      </div>
+    </div>
+    <button class="btn" id="btnCalibrate" style="margin-top:12px;">CALCULER ALPHA</button>
+    <div id="calResult" style="margin-top:16px; font-size:13px;"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">REFERENCES PAR DEFAUT</div>
+    <div style="font-size:12px; color:var(--fg-dim); line-height:1.6;">
+      <p>Approximations sans mesure, a affiner ensuite :</p>
+      <br>
+      <p>&middot; Bouilloire plastique entree de gamme (Tefal Uno, etc) : <b style="color:var(--fg);">~0.007</b></p>
+      <p>&middot; Bouilloire plastique standard : <b style="color:var(--fg);">~0.010</b></p>
+      <p>&middot; Bouilloire inox ouverture large : <b style="color:var(--fg);">~0.013</b></p>
+      <p>&middot; Casserole large ouverte : <b style="color:var(--fg);">~0.018</b></p>
+      <br>
+      <p>Ces valeurs sont indicatives. Une calibration reelle au thermometre est <b style="color:var(--fg);">x10 plus precise</b>.</p>
+    </div>
+  </div>
+</main>
+
+<!-- =========== TEA EDIT =========== -->
+<main id="view-tea-edit" class="hidden">
+  <button class="btn ghost" id="btnBackTeaEdit" style="margin-bottom:16px">&lt; ANNULER</button>
+
+  <div class="section">
+    <div class="section-label" id="teaEditLabel">NOUVEAU THE</div>
+    <div class="field">
+      <label>NOM</label>
+      <input type="text" id="teaEditName" placeholder="EX: SENCHA DE YAME">
+    </div>
+    <div class="field">
+      <label>CATEGORIE</label>
+      <select id="teaEditCategory"></select>
+    </div>
+    <div class="field-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="field" style="margin:0;">
+        <label>TEMP (&deg;C)</label>
+        <input type="number" id="teaEditTemp" min="40" max="100">
+      </div>
+      <div class="field" style="margin:0;">
+        <label>DUREE (MIN:SS)</label>
+        <input type="text" id="teaEditTime" placeholder="03:00">
+      </div>
+      <div class="field" style="margin:0;">
+        <label>DOSE (G/100ML)</label>
+        <input type="number" id="teaEditDose" min="0.1" max="20" step="0.1">
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>NOTES (OPTIONNEL)</label>
+      <textarea id="teaEditNotes" rows="4" placeholder="Notes d'infusion, origine, observations..."></textarea>
+    </div>
+    <button class="btn" id="btnSaveTea">ENREGISTRER</button>
+  </div>
+</main>
+
+<!-- =========== ABOUT =========== -->
+<main id="view-about" class="hidden">
+  <button class="btn ghost" id="btnBackAbout" style="margin-bottom:16px">&lt; RETOUR</button>
+  <div class="section">
+    <div class="section-label">A PROPOS</div>
+    <div style="font-size:13px; line-height:1.6;">
+      <p><b>TEA.LOG</b> calcule le temps d'attente pour que l'eau bouillie atteigne la temperature cible de ton the, en utilisant la loi de refroidissement de Newton.</p>
+      <br>
+      <p>Formule appliquee:</p>
+      <p style="color:var(--fg-dim); font-size:12px;">T(t) = Tamb + (T0 - Tamb) &middot; exp(-k&middot;t)<br>k = alpha &middot; D&sup2; / V</p>
+      <br>
+      <p>D: diametre d'ouverture (cm), V: volume eau (mL), alpha: facteur empirique.</p>
+      <br>
+      <p><b>SUR ALPHA:</b> ce coefficient ne se calcule pas a priori, il depend de ton materiel exact (materiau de la bouilloire, pertes par evaporation, convection de la piece). La valeur par defaut (0.010) est plausible pour une bouilloire electrique plastique standard avec couvercle ouvert. Pour calibrer precisement, va dans PARAMETRES &gt; CALIBRATION et fais une mesure unique avec un thermometre culinaire.</p>
+      <br>
+      <p style="color:var(--fg-dim);">Le couvercle doit etre <b style="color:var(--fg);">ouvert</b> pendant le refroidissement. Couvercle ferme = k beaucoup plus faible, et les calculs deviennent faux.</p>
+      <br>
+      <p style="color:var(--fg-dim);">Sans thermometre, ajuste alpha par essai-erreur : the trop amer = baisse alpha, the fade = monte alpha.</p>
+    </div>
+  </div>
+</main>
+
+<!-- =========== HISTORY =========== -->
+<main id="view-history" class="hidden">
+  <button class="btn ghost" id="btnBackHistory" style="margin-bottom:16px">&lt; RETOUR</button>
+
+  <div class="section">
+    <div class="section-label">ANALYSE</div>
+    <div id="historyAnalysis"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">JOURNAL</div>
+    <div id="historyLog"></div>
+  </div>
+
+  <div class="section" id="historyClearSection">
+    <button class="btn alert" id="btnClearHistory">VIDER L'HISTORIQUE</button>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+/* =====================================================
+ *  DATA & STORAGE
+ * ===================================================== */
+
+// dose = grams of leaf per 100 mL of water (western brewing reference)
+const CATEGORIES = [
+  { id: 'green',       name: 'VERT',                temp: 80,  time: 150, dose: 2.0, popular: true  },
+  { id: 'green_jp',    name: 'VERT JAPONAIS',       temp: 70,  time: 90,  dose: 2.0, popular: false },
+  { id: 'white',       name: 'BLANC',               temp: 85,  time: 210, dose: 2.5, popular: false },
+  { id: 'yellow',      name: 'JAUNE',               temp: 80,  time: 150, dose: 2.0, popular: false },
+  { id: 'oolong',      name: 'OOLONG',              temp: 85,  time: 210, dose: 2.5, popular: true  },
+  { id: 'black',       name: 'NOIR',                temp: 95,  time: 240, dose: 2.5, popular: true  },
+  { id: 'puerh_shou',  name: 'PU-ERH SOMBRE',       temp: 95,  time: 240, dose: 2.5, popular: false },
+  { id: 'puerh_sheng', name: 'PU-ERH CRU',          temp: 90,  time: 210, dose: 2.5, popular: false },
+  { id: 'rooibos',     name: 'ROOIBOS',             temp: 100, time: 360, dose: 2.5, popular: false },
+  { id: 'mate',        name: 'MATE',                temp: 75,  time: 240, dose: 2.5, popular: true  },
+  { id: 'herbal',      name: 'TISANE',              temp: 100, time: 480, dose: 2.0, popular: true  },
+  { id: 'fruit',       name: 'INFUSION FRUITS',     temp: 100, time: 600, dose: 2.5, popular: false },
+];
+
+const DEFAULT_SETTINGS = {
+  ambientTemp: 20,
+  kettleDiameter: 9,
+  alpha: 0.01,
+  defaultContainerId: 'thermos',
+  lastVolume: 450,
+};
+
+const DEFAULT_CONTAINERS = [
+  { id: 'thermos', name: 'THERMOS', volume: 450 },
+];
+
+const STORE_KEYS = {
+  settings:    'tealog.settings',
+  containers:  'tealog.containers',
+  customTeas:  'tealog.customTeas',
+  history:     'tealog.history',
+};
+
+// Storage helpers tolerant to localStorage unavailability (Claude.ai sandbox)
+const memStore = {};
+function storeGet(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return JSON.parse(raw);
+  } catch (e) {
+    return memStore[key] !== undefined ? memStore[key] : fallback;
+  }
+}
+function storeSet(key, val) {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch (e) {
+    memStore[key] = val;
+  }
+}
+
+let settings   = Object.assign({}, DEFAULT_SETTINGS, storeGet(STORE_KEYS.settings,   {}));
+let containers = storeGet(STORE_KEYS.containers, DEFAULT_CONTAINERS.slice());
+let customTeas = storeGet(STORE_KEYS.customTeas, []);
+let history    = storeGet(STORE_KEYS.history, []);
+
+// Ephemeral UI state (not persisted)
+const homeState = { showAllCategories: false };
+
+function saveAll() {
+  storeSet(STORE_KEYS.settings, settings);
+  storeSet(STORE_KEYS.containers, containers);
+  storeSet(STORE_KEYS.customTeas, customTeas);
+  storeSet(STORE_KEYS.history, history);
+}
+
+/* =====================================================
+ *  PHYSICS: Newton cooling
+ * ===================================================== */
+
+/**
+ * Time (seconds) for water in an open kettle to cool from startTemp to targetTemp.
+ * Newton's law of cooling with empirical coefficient.
+ */
+function coolingTime(targetTemp, startTemp, ambientTemp, volumeML, diameterCM, alpha) {
+  if (targetTemp >= startTemp) return 0;
+  if (targetTemp <= ambientTemp + 0.5) return Infinity;
+  const k = alpha * (diameterCM * diameterCM) / volumeML;
+  const ratio = (targetTemp - ambientTemp) / (startTemp - ambientTemp);
+  const t = -Math.log(ratio) / k;
+  return Math.max(0, Math.round(t));
+}
+
+/**
+ * Estimated temperature at time t (seconds) after starting from startTemp.
+ */
+function tempAtTime(t, startTemp, ambientTemp, volumeML, diameterCM, alpha) {
+  const k = alpha * (diameterCM * diameterCM) / volumeML;
+  return ambientTemp + (startTemp - ambientTemp) * Math.exp(-k * t);
+}
+
+/* =====================================================
+ *  FORMAT HELPERS
+ * ===================================================== */
+
+function fmtTime(sec) {
+  if (sec === Infinity) return '--:--';
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function parseTime(str) {
+  // Accept "MM:SS" or "M:SS" or just seconds as a number string
+  if (!str) return null;
+  const parts = String(str).trim().split(':');
+  if (parts.length === 2) {
+    const m = parseInt(parts[0], 10);
+    const s = parseInt(parts[1], 10);
+    if (isNaN(m) || isNaN(s)) return null;
+    return m * 60 + s;
+  }
+  const n = parseInt(str, 10);
+  return isNaN(n) ? null : n;
+}
+
+// Resolve dose (g/100mL) for a brew tea, tolerant to legacy custom teas without it.
+function resolveDose(tea) {
+  if (tea && tea.dose != null && !isNaN(tea.dose)) return tea.dose;
+  const cat = CATEGORIES.find(c => c.id === (tea && (tea.categoryId || tea.id)));
+  return cat ? cat.dose : 2.0;
+}
+
+// Leaf grams for a given dose rate and water volume.
+function leafGrams(dosePer100, volumeML) {
+  return dosePer100 * volumeML / 100;
+}
+
+function fmtGrams(g) {
+  return (Math.round(g * 10) / 10).toString();
+}
+
+function fmtStamp(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '????';
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+    ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+const RATING_LABELS = { bitter: 'TROP AMER', perfect: 'PARFAIT', flat: 'FADE' };
+const RATING_COLORS = { bitter: 'var(--cool)', perfect: 'var(--fg)', flat: 'var(--warm)' };
+
+/* =====================================================
+ *  VIEWS
+ * ===================================================== */
+
+const views = ['home','setup','cooling','steeping','done','settings','calibration','tea-edit','about','history'];
+function show(view) {
+  // Any navigation cancels an active alarm title-flash.
+  if (typeof stopTitleFlash === 'function') stopTitleFlash();
+  views.forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.classList.toggle('hidden', v !== view);
+  });
+  window.scrollTo(0, 0);
+}
+
+function renderMeta() {
+  document.getElementById('metaAmb').textContent = 'AMB ' + settings.ambientTemp + '\u00B0C';
+  const container = currentContainer();
+  document.getElementById('metaContainer').textContent =
+    container ? (container.name + ' ' + container.volume + 'ML') : '--';
+}
+
+/* ---------- HOME ---------- */
+
+function renderHome() {
+  // Categories: by default, only "popular" ones sorted by temp ASC.
+  // A "show all" toggle reveals the full sorted list.
+  const list = document.getElementById('categoriesList');
+  list.innerHTML = '';
+
+  const showAll = homeState.showAllCategories;
+  const sorted = CATEGORIES.slice().sort((a, b) => a.temp - b.temp || a.name.localeCompare(b.name));
+  const filtered = showAll ? sorted : sorted.filter(c => c.popular);
+
+  filtered.forEach((cat) => {
+    const b = document.createElement('button');
+    b.className = 'tea-item';
+    b.innerHTML =
+      '<div class="tea-name"><span class="marker">' + cat.temp + '\u00B0</span>' + cat.name + '</div>' +
+      '<div class="tea-spec">' + fmtTime(cat.time) + '</div>' +
+      '<div class="tea-arrow">&gt;</div>';
+    b.addEventListener('click', () => startSetup({
+      kind: 'category',
+      id: cat.id,
+      categoryId: cat.id,
+      name: cat.name,
+      temp: cat.temp,
+      time: cat.time,
+      dose: cat.dose,
+      notes: '',
+    }));
+    list.appendChild(b);
+  });
+
+  // Toggle row at the bottom of the category list
+  const toggle = document.createElement('button');
+  toggle.className = 'tea-item';
+  toggle.style.cssText = 'color:var(--fg-dim); justify-content:center; grid-template-columns:1fr; text-align:center;';
+  const hidden = sorted.length - filtered.length;
+  toggle.innerHTML = '<div class="tea-name" style="text-align:center; font-weight:400; font-size:12px; letter-spacing:0.1em;">' +
+    (showAll ? '\u2014 RESERRER \u2014' : '+ AFFICHER TOUTES LES CATEGORIES (' + hidden + ' DE PLUS)') +
+    '</div>';
+  toggle.addEventListener('click', () => {
+    homeState.showAllCategories = !homeState.showAllCategories;
+    renderHome();
+  });
+  list.appendChild(toggle);
+
+  // Custom teas
+  const cList = document.getElementById('customTeasList');
+  cList.innerHTML = '';
+  if (customTeas.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:14px; color:var(--fg-dim); font-size:12px;';
+    empty.textContent = '// VIDE. AJOUTE TON PREMIER THE PERSO.';
+    cList.appendChild(empty);
+  } else {
+    customTeas.forEach(tea => {
+      const wrap = document.createElement('div');
+      wrap.className = 'custom-tea';
+
+      const cat = CATEGORIES.find(c => c.id === tea.categoryId);
+      const btn = document.createElement('button');
+      btn.className = 'tea-item';
+      btn.innerHTML =
+        '<div class="tea-name">' + tea.name +
+          (cat ? ' <span style="color:var(--fg-dim); font-weight:400;">[' + cat.name + ']</span>' : '') +
+        '</div>' +
+        '<div class="tea-spec">' + tea.temp + '\u00B0C \u00B7 ' + fmtTime(tea.time) + '</div>' +
+        '<div class="tea-arrow">&gt;</div>';
+      btn.addEventListener('click', () => startSetup({
+        kind: 'custom',
+        id: tea.id,
+        categoryId: tea.categoryId || null,
+        name: tea.name,
+        temp: tea.temp,
+        time: tea.time,
+        dose: resolveDose(tea),
+        notes: tea.notes || '',
+      }));
+      wrap.appendChild(btn);
+
+      const actions = document.createElement('div');
+      actions.className = 'custom-tea-actions';
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'EDITER';
+      editBtn.addEventListener('click', () => editCustomTea(tea.id));
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'SUPPRIMER';
+      delBtn.style.color = 'var(--alert)';
+      delBtn.addEventListener('click', () => {
+        if (confirm('Supprimer "' + tea.name + '" ?')) {
+          customTeas = customTeas.filter(t => t.id !== tea.id);
+          saveAll();
+          renderHome();
+        }
+      });
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      wrap.appendChild(actions);
+      cList.appendChild(wrap);
+    });
+  }
+}
+
+/* ---------- SETUP ---------- */
+
+let currentBrew = null;
+
+function currentContainer() {
+  return containers.find(c => c.id === settings.defaultContainerId) || containers[0];
+}
+
+function startSetup(tea) {
+  currentBrew = {
+    tea: tea,
+    volume: settings.lastVolume,
+    containerId: settings.defaultContainerId,
+  };
+  document.getElementById('setupTeaInfo').textContent = tea.name;
+  document.getElementById('setupTeaSubInfo').textContent =
+    tea.kind === 'category' ? 'CATEGORIE STANDARD' : 'THE PERSONNEL';
+  document.getElementById('setupTemp').textContent = tea.temp;
+  document.getElementById('setupTime').textContent = fmtTime(tea.time);
+
+  // Container select
+  const sel = document.getElementById('setupContainer');
+  sel.innerHTML = '';
+  containers.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name + ' (' + c.volume + ' ML)';
+    sel.appendChild(opt);
+  });
+  sel.value = currentBrew.containerId;
+  sel.onchange = () => {
+    currentBrew.containerId = sel.value;
+    const c = containers.find(x => x.id === sel.value);
+    if (c) {
+      currentBrew.volume = c.volume;
+      document.getElementById('setupVolume').value = c.volume;
+      settings.defaultContainerId = c.id;
+      settings.lastVolume = c.volume;
+      saveAll();
+      updateEstimate();
+      renderMeta();
+    }
+  };
+
+  // Volume
+  const volInput = document.getElementById('setupVolume');
+  volInput.value = currentBrew.volume;
+  volInput.oninput = () => {
+    const v = parseInt(volInput.value, 10);
+    if (!isNaN(v) && v > 0) {
+      currentBrew.volume = v;
+      settings.lastVolume = v;
+      saveAll();
+      updateEstimate();
+    }
+  };
+
+  // Notes
+  const notesSection = document.getElementById('setupNotesSection');
+  if (tea.notes && tea.notes.trim()) {
+    document.getElementById('setupNotes').textContent = tea.notes;
+    notesSection.classList.remove('hidden');
+  } else {
+    notesSection.classList.add('hidden');
+  }
+
+  updateEstimate();
+  show('setup');
+}
+
+function updateEstimate() {
+  if (!currentBrew) return;
+  const sec = coolingTime(
+    currentBrew.tea.temp,
+    100,
+    settings.ambientTemp,
+    currentBrew.volume,
+    settings.kettleDiameter,
+    settings.alpha
+  );
+  document.getElementById('estCool').textContent = fmtTime(sec);
+  document.getElementById('estTarget').textContent = currentBrew.tea.temp;
+  document.getElementById('estAmb').textContent = settings.ambientTemp;
+  document.getElementById('estDiam').textContent = settings.kettleDiameter;
+
+  const dose = resolveDose(currentBrew.tea);
+  document.getElementById('setupDose').textContent = fmtGrams(leafGrams(dose, currentBrew.volume));
+  document.getElementById('setupDoseRate').textContent = fmtGrams(dose);
+}
+
+/* =====================================================
+ *  TIMERS (cooling + steeping)
+ * ===================================================== */
+
+let timerState = null;  // { phase, tea, volume, startedAt, totalSec, rafId }
+
+let wakeLock = null;
+async function acquireWakeLock() {
+  if ('wakeLock' in navigator) {
+    try { wakeLock = await navigator.wakeLock.request('screen'); }
+    catch (e) { /* ignore */ }
+  }
+}
+function releaseWakeLock() {
+  if (wakeLock) { try { wakeLock.release(); } catch(e){} wakeLock = null; }
+}
+
+// Re-acquire wake lock + stop title flash when the tab regains focus
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (timerState) acquireWakeLock();
+    stopTitleFlash();
+  }
+});
+
+/* ---------- AUDIO BEEP ---------- */
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function beep(freq, durationMs, volume) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.01);
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime + durationMs/1000 - 0.02);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + durationMs/1000);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + durationMs/1000);
+}
+function alarm() {
+  ensureAudio();
+  if (audioCtx) {
+    // Loud triple beep with descending pitch for distinctiveness
+    beep(1200, 250, 0.5);
+    setTimeout(() => beep(1200, 250, 0.5), 350);
+    setTimeout(() => beep(1200, 600, 0.5), 700);
+  }
+  // Vibrate if supported (mobile only, no-op on PC)
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+  // PC-friendly visual: title bar flashing (always on, no permission needed)
+  startTitleFlash('TEMPS ECOULE');
+  // PC-friendly system notification (opt-in, see settings)
+  systemNotify('TEA.LOG', currentBrew ? currentBrew.tea.name + ' : temps ecoule' : 'Temps ecoule');
+}
+
+/* ---------- TAB TITLE FLASH ---------- */
+const ORIGINAL_TITLE = document.title;
+let titleFlashTimer = null;
+function startTitleFlash(msg) {
+  stopTitleFlash();
+  let on = false;
+  titleFlashTimer = setInterval(() => {
+    on = !on;
+    document.title = on ? '[!] ' + msg : ORIGINAL_TITLE;
+  }, 700);
+}
+function stopTitleFlash() {
+  if (titleFlashTimer) {
+    clearInterval(titleFlashTimer);
+    titleFlashTimer = null;
+  }
+  document.title = ORIGINAL_TITLE;
+}
+
+/* ---------- SYSTEM NOTIFICATION ---------- */
+function systemNotify(title, body) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, {
+      body: body,
+      icon: 'favicon.svg',
+      tag: 'tealog-timer',       // collapse repeats
+      requireInteraction: true,  // stays until user dismisses
+    });
+    n.onclick = () => { try { window.focus(); } catch(e){} n.close(); };
+  } catch (e) { /* file:// origin or other restriction */ }
+}
+
+function askNotifPermission() {
+  if (!('Notification' in window)) {
+    alert('Ton navigateur ne supporte pas les notifications systeme.');
+    return;
+  }
+  Notification.requestPermission().then(() => renderNotifStatus());
+}
+
+function renderNotifStatus() {
+  const status = document.getElementById('notifStatus');
+  const btn = document.getElementById('btnNotifAsk');
+  if (!status || !btn) return;
+  if (!('Notification' in window)) {
+    status.textContent = 'NON SUPPORTE';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    return;
+  }
+  const map = { 'default': 'NON DEMANDEES', 'granted': 'ACCORDEES', 'denied': 'REFUSEES' };
+  status.textContent = map[Notification.permission] || Notification.permission.toUpperCase();
+  if (Notification.permission !== 'default') {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '';
+  }
+}
+
+/* ---------- COOLING ---------- */
+
+function startCooling() {
+  if (!currentBrew) return;
+  ensureAudio();
+  acquireWakeLock();
+
+  const totalSec = coolingTime(
+    currentBrew.tea.temp,
+    100,
+    settings.ambientTemp,
+    currentBrew.volume,
+    settings.kettleDiameter,
+    settings.alpha
+  );
+
+  if (totalSec === 0) {
+    // Already at or below target (shouldn't happen with boil to 100), skip directly
+    startSteeping();
+    return;
+  }
+  if (totalSec === Infinity) {
+    alert('Cible inatteignable : la temperature ambiante est trop proche de la cible.');
+    return;
+  }
+
+  timerState = {
+    phase: 'cooling',
+    startedAt: Date.now(),
+    totalSec: totalSec,
+    fired: false,
+  };
+
+  document.getElementById('coolTeaName').textContent = currentBrew.tea.name;
+  document.getElementById('coolTargetTemp').textContent = currentBrew.tea.temp;
+  show('cooling');
+  tickCooling();
+}
+
+function tickCooling() {
+  if (!timerState || timerState.phase !== 'cooling') return;
+  const elapsed = (Date.now() - timerState.startedAt) / 1000;
+  const remaining = Math.max(0, timerState.totalSec - elapsed);
+  document.getElementById('coolDisplay').textContent = fmtTime(remaining);
+
+  const t = tempAtTime(elapsed, 100, settings.ambientTemp, currentBrew.volume, settings.kettleDiameter, settings.alpha);
+  document.getElementById('coolNowTemp').textContent = t.toFixed(1);
+
+  const pct = Math.min(100, (elapsed / timerState.totalSec) * 100);
+  document.getElementById('coolProgress').style.width = pct + '%';
+
+  // ASCII steam decoration
+  const steamFrames = [
+    '   ~  ~   ~\n  ~   ~  ~ \n  ~  ~   ~ ',
+    '  ~  ~   ~ \n ~   ~  ~  \n  ~  ~   ~ ',
+    ' ~   ~  ~  \n  ~   ~  ~ \n ~   ~  ~  ',
+  ];
+  const frame = Math.floor(Date.now() / 350) % steamFrames.length;
+  document.getElementById('coolAscii').textContent = steamFrames[frame];
+
+  if (remaining <= 0 && !timerState.fired) {
+    timerState.fired = true;
+    alarm();
+    document.getElementById('coolDisplay').textContent = '00:00';
+    document.getElementById('coolDisplay').style.color = 'var(--alert)';
+  }
+
+  timerState.rafId = requestAnimationFrame(tickCooling);
+}
+
+function stopCoolingLoop() {
+  if (timerState && timerState.rafId) cancelAnimationFrame(timerState.rafId);
+  document.getElementById('coolDisplay').style.color = '';
+}
+
+/* ---------- STEEPING ---------- */
+
+function startSteeping() {
+  ensureAudio();
+  acquireWakeLock();
+  stopCoolingLoop();
+
+  timerState = {
+    phase: 'steeping',
+    startedAt: Date.now(),
+    totalSec: currentBrew.tea.time,
+    fired: false,
+  };
+
+  document.getElementById('steepTeaName').textContent = currentBrew.tea.name;
+  document.getElementById('steepTemp').textContent = currentBrew.tea.temp;
+  show('steeping');
+  tickSteeping();
+}
+
+function tickSteeping() {
+  if (!timerState || timerState.phase !== 'steeping') return;
+  const elapsed = (Date.now() - timerState.startedAt) / 1000;
+  const remaining = Math.max(0, timerState.totalSec - elapsed);
+  document.getElementById('steepDisplay').textContent = fmtTime(remaining);
+  const pct = Math.min(100, (elapsed / timerState.totalSec) * 100);
+  document.getElementById('steepProgress').style.width = pct + '%';
+
+  if (remaining <= 0 && !timerState.fired) {
+    timerState.fired = true;
+    alarm();
+    document.getElementById('steepDisplay').style.color = 'var(--alert)';
+    setTimeout(() => {
+      document.getElementById('steepDisplay').style.color = '';
+      finishBrew();
+    }, 1500);
+  } else {
+    timerState.rafId = requestAnimationFrame(tickSteeping);
+  }
+}
+
+function finishBrew() {
+  stopCoolingLoop();
+  if (timerState && timerState.rafId) cancelAnimationFrame(timerState.rafId);
+  releaseWakeLock();
+  timerState = null;
+  show('done');
+}
+
+function abortTimer() {
+  if (timerState && timerState.rafId) cancelAnimationFrame(timerState.rafId);
+  releaseWakeLock();
+  timerState = null;
+  show('home');
+}
+
+/* =====================================================
+ *  CUSTOM TEAS CRUD
+ * ===================================================== */
+
+let editingTeaId = null;
+
+function newCustomTea() {
+  editingTeaId = null;
+  document.getElementById('teaEditLabel').textContent = 'NOUVEAU THE';
+  document.getElementById('teaEditName').value = '';
+  document.getElementById('teaEditTemp').value = 80;
+  document.getElementById('teaEditTime').value = '03:00';
+  document.getElementById('teaEditDose').value = 2.5;
+  document.getElementById('teaEditNotes').value = '';
+
+  const sel = document.getElementById('teaEditCategory');
+  sel.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+  // Default to black
+  sel.value = 'black';
+
+  // When category changes, prefill temp/time/dose
+  sel.onchange = () => {
+    const c = CATEGORIES.find(x => x.id === sel.value);
+    if (c) {
+      document.getElementById('teaEditTemp').value = c.temp;
+      document.getElementById('teaEditTime').value = fmtTime(c.time);
+      document.getElementById('teaEditDose').value = c.dose;
+    }
+  };
+
+  show('tea-edit');
+}
+
+function editCustomTea(id) {
+  const tea = customTeas.find(t => t.id === id);
+  if (!tea) return;
+  editingTeaId = id;
+  document.getElementById('teaEditLabel').textContent = 'EDITER THE';
+  document.getElementById('teaEditName').value = tea.name;
+  document.getElementById('teaEditTemp').value = tea.temp;
+  document.getElementById('teaEditTime').value = fmtTime(tea.time);
+  document.getElementById('teaEditDose').value = resolveDose(tea);
+  document.getElementById('teaEditNotes').value = tea.notes || '';
+
+  const sel = document.getElementById('teaEditCategory');
+  sel.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+  sel.value = tea.categoryId || 'black';
+  sel.onchange = null;
+
+  show('tea-edit');
+}
+
+function saveTeaForm() {
+  const name = document.getElementById('teaEditName').value.trim();
+  const temp = parseInt(document.getElementById('teaEditTemp').value, 10);
+  const time = parseTime(document.getElementById('teaEditTime').value);
+  const dose = parseFloat(document.getElementById('teaEditDose').value);
+  const notes = document.getElementById('teaEditNotes').value.trim();
+  const categoryId = document.getElementById('teaEditCategory').value;
+
+  if (!name) { alert('Nom obligatoire.'); return; }
+  if (isNaN(temp) || temp < 40 || temp > 100) { alert('Temperature entre 40 et 100.'); return; }
+  if (!time || time < 5) { alert('Duree invalide. Format MM:SS.'); return; }
+  if (isNaN(dose) || dose <= 0 || dose > 20) { alert('Dose invalide (g/100mL).'); return; }
+
+  if (editingTeaId) {
+    const t = customTeas.find(x => x.id === editingTeaId);
+    if (t) { t.name = name; t.temp = temp; t.time = time; t.dose = dose; t.notes = notes; t.categoryId = categoryId; }
+  } else {
+    customTeas.push({
+      id: 'tea_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name: name, temp: temp, time: time, dose: dose, notes: notes, categoryId: categoryId,
+    });
+  }
+  saveAll();
+  show('home');
+  renderHome();
+}
+
+/* =====================================================
+ *  SETTINGS
+ * ===================================================== */
+
+function renderSettings() {
+  // Ambient
+  const amb = document.getElementById('settingAmb');
+  amb.value = settings.ambientTemp;
+  document.getElementById('settingAmbVal').textContent = settings.ambientTemp;
+  amb.oninput = () => {
+    settings.ambientTemp = parseInt(amb.value, 10);
+    document.getElementById('settingAmbVal').textContent = settings.ambientTemp;
+    saveAll();
+    renderMeta();
+  };
+
+  // Diameter
+  const dia = document.getElementById('settingDiam');
+  dia.value = settings.kettleDiameter;
+  document.getElementById('settingDiamVal').textContent = settings.kettleDiameter;
+  dia.oninput = () => {
+    settings.kettleDiameter = parseFloat(dia.value);
+    document.getElementById('settingDiamVal').textContent = settings.kettleDiameter;
+    saveAll();
+  };
+
+  // Alpha
+  const alp = document.getElementById('settingAlpha');
+  alp.value = settings.alpha;
+  document.getElementById('settingAlphaVal').textContent = settings.alpha.toFixed(3);
+  alp.oninput = () => {
+    settings.alpha = parseFloat(alp.value);
+    document.getElementById('settingAlphaVal').textContent = settings.alpha.toFixed(3);
+    saveAll();
+  };
+
+  // Containers
+  renderContainerList();
+
+  // Notifications status
+  renderNotifStatus();
+
+  show('settings');
+}
+
+function renderContainerList() {
+  const list = document.getElementById('containerList');
+  list.innerHTML = '';
+  containers.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'container-item' + (c.id === settings.defaultContainerId ? ' active' : '');
+
+    const main = document.createElement('button');
+    main.style.cssText = 'display:contents;';
+    main.innerHTML =
+      '<div class="ci-name">' + c.name + '</div>' +
+      '<div class="ci-vol">' + c.volume + ' ML</div>';
+    main.addEventListener('click', () => {
+      settings.defaultContainerId = c.id;
+      settings.lastVolume = c.volume;
+      saveAll();
+      renderContainerList();
+      renderMeta();
+    });
+    row.appendChild(main);
+
+    if (containers.length > 1) {
+      const del = document.createElement('button');
+      del.className = 'ci-del';
+      del.textContent = 'X';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm('Supprimer "' + c.name + '" ?')) {
+          containers = containers.filter(x => x.id !== c.id);
+          if (settings.defaultContainerId === c.id && containers.length > 0) {
+            settings.defaultContainerId = containers[0].id;
+            settings.lastVolume = containers[0].volume;
+          }
+          saveAll();
+          renderContainerList();
+          renderMeta();
+        }
+      });
+      row.appendChild(del);
+    } else {
+      const spacer = document.createElement('div');
+      row.appendChild(spacer);
+    }
+
+    list.appendChild(row);
+  });
+}
+
+function addContainer() {
+  const name = document.getElementById('newContainerName').value.trim();
+  const vol = parseInt(document.getElementById('newContainerVol').value, 10);
+  if (!name) { alert('Nom obligatoire.'); return; }
+  if (isNaN(vol) || vol <= 0 || vol > 5000) { alert('Volume invalide.'); return; }
+  containers.push({
+    id: 'cont_' + Date.now(),
+    name: name.toUpperCase(),
+    volume: vol,
+  });
+  saveAll();
+  document.getElementById('newContainerName').value = '';
+  document.getElementById('newContainerVol').value = '';
+  renderContainerList();
+}
+
+function exportData() {
+  const data = { settings, containers, customTeas, history, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tealog-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let data;
+    try {
+      data = JSON.parse(reader.result);
+    } catch (e) {
+      alert('Fichier illisible : JSON invalide.');
+      return;
+    }
+    if (!data || typeof data !== 'object' ||
+        (!data.settings && !data.containers && !data.customTeas && !data.history)) {
+      alert('Fichier non reconnu : aucune donnee TeaLog trouvee.');
+      return;
+    }
+    if (!confirm('Importer ce fichier ecrasera tes donnees actuelles. Continuer ?')) return;
+
+    if (data.settings && typeof data.settings === 'object') {
+      settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+    }
+    if (Array.isArray(data.containers) && data.containers.length) {
+      containers = data.containers;
+    }
+    if (Array.isArray(data.customTeas)) customTeas = data.customTeas;
+    if (Array.isArray(data.history)) history = data.history;
+
+    // Guard: keep a valid selected container
+    if (!containers.find(c => c.id === settings.defaultContainerId)) {
+      settings.defaultContainerId = containers[0] ? containers[0].id : DEFAULT_CONTAINERS[0].id;
+    }
+
+    saveAll();
+    renderMeta();
+    renderHome();
+    renderSettings();
+    alert('Import reussi.');
+  };
+  reader.onerror = () => alert('Erreur de lecture du fichier.');
+  reader.readAsText(file);
+}
+
+function resetAll() {
+  if (!confirm('TOUT RESET ? Tes thes perso, contenants et reglages seront perdus.')) return;
+  settings = Object.assign({}, DEFAULT_SETTINGS);
+  containers = DEFAULT_CONTAINERS.slice();
+  customTeas = [];
+  history = [];
+  saveAll();
+  renderMeta();
+  renderHome();
+  show('home');
+}
+
+function renderCalibration() {
+  document.getElementById('calCurrentAmb').textContent = settings.ambientTemp;
+  document.getElementById('calCurrentDiam').textContent = settings.kettleDiameter;
+  document.getElementById('calResult').innerHTML = '';
+  show('calibration');
+}
+
+/**
+ * Compute alpha from a single measurement point.
+ * Inverse Newton: T = Tamb + (T0 - Tamb) * exp(-k * t)
+ *   => k = -ln((T - Tamb) / (T0 - Tamb)) / t
+ *   => alpha = k * V / D^2
+ */
+function calibrateAlpha() {
+  const V = parseInt(document.getElementById('calVolume').value, 10);
+  const t = parseTime(document.getElementById('calTime').value);
+  const T = parseFloat(document.getElementById('calTemp').value);
+  const T0 = 100;
+  const Tamb = settings.ambientTemp;
+  const D = settings.kettleDiameter;
+  const result = document.getElementById('calResult');
+
+  if (isNaN(V) || V < 50)             { result.innerHTML = '<span style="color:var(--alert);">Volume invalide.</span>'; return; }
+  if (!t || t < 30)                    { result.innerHTML = '<span style="color:var(--alert);">Temps invalide (min 30s).</span>'; return; }
+  if (isNaN(T) || T <= Tamb || T >= T0){ result.innerHTML = '<span style="color:var(--alert);">Temp mesuree doit etre entre ambiante et 100.</span>'; return; }
+
+  const ratio = (T - Tamb) / (T0 - Tamb);
+  const k = -Math.log(ratio) / t;
+  const alpha = k * V / (D * D);
+
+  if (alpha < 0.001 || alpha > 0.1) {
+    result.innerHTML = '<span style="color:var(--alert);">Alpha calcule hors plage raisonnable (' + alpha.toFixed(4) + '). Verifie tes valeurs.</span>';
+    return;
+  }
+
+  result.innerHTML =
+    '<b>ALPHA CALCULE: ' + alpha.toFixed(4) + '</b><br>' +
+    '<span style="color:var(--fg-dim);">Actuel: ' + settings.alpha.toFixed(4) + '</span><br>' +
+    '<button class="btn cool" style="margin-top:8px;" id="btnApplyAlpha">APPLIQUER</button>';
+
+  document.getElementById('btnApplyAlpha').addEventListener('click', () => {
+    // Clamp into slider range to keep UI consistent
+    settings.alpha = Math.max(0.003, Math.min(0.025, alpha));
+    saveAll();
+    document.getElementById('calResult').innerHTML =
+      '<span style="color:var(--cool);">// APPLIQUE. Alpha = ' + settings.alpha.toFixed(4) + '<br>Tu peux revenir aux parametres.</span>';
+  });
+}
+
+/* =====================================================
+ *  HISTORY
+ * ===================================================== */
+
+const MIN_ANALYSIS = 3;  // infusions needed before a tea gets a verdict
+
+function logRating(rating) {
+  if (currentBrew) {
+    history.unshift({
+      id: 'h_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      teaKey: currentBrew.tea.kind + ':' + currentBrew.tea.id,
+      teaName: currentBrew.tea.name,
+      categoryId: currentBrew.tea.categoryId ||
+        (currentBrew.tea.kind === 'category' ? currentBrew.tea.id : null),
+      temp: currentBrew.tea.temp,
+      time: currentBrew.tea.time,
+      volume: currentBrew.volume,
+      rating: rating,
+      at: new Date().toISOString(),
+    });
+    if (history.length > 500) history.length = 500;
+    saveAll();
+  }
+  currentBrew = null;
+  renderHome();
+  show('home');
+}
+
+function renderHistory() {
+  renderHistoryAnalysis();
+  renderHistoryLog();
+  document.getElementById('historyClearSection').classList.toggle('hidden', history.length === 0);
+  show('history');
+}
+
+function renderHistoryAnalysis() {
+  const wrap = document.getElementById('historyAnalysis');
+  wrap.innerHTML = '';
+
+  const groups = {};
+  history.forEach(h => {
+    let g = groups[h.teaKey];
+    if (!g) { g = groups[h.teaKey] = { name: h.teaName, total: 0, bitter: 0, perfect: 0, flat: 0 }; }
+    g.name = h.teaName;
+    g.total++;
+    if (g[h.rating] !== undefined) g[h.rating]++;
+  });
+
+  const ready = Object.keys(groups).map(k => groups[k])
+    .filter(g => g.total >= MIN_ANALYSIS)
+    .sort((a, b) => b.total - a.total);
+
+  if (ready.length === 0) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'padding:14px; color:var(--fg-dim); font-size:12px; border:1px solid var(--border);';
+    msg.textContent = '// PAS ASSEZ DE DONNEES. MINIMUM ' + MIN_ANALYSIS +
+      ' INFUSIONS NOTEES PAR THE POUR UN VERDICT.';
+    wrap.appendChild(msg);
+    return;
+  }
+
+  ready.forEach(g => {
+    const bitterPct = Math.round(g.bitter / g.total * 100);
+    const perfectPct = Math.round(g.perfect / g.total * 100);
+    const flatPct = Math.round(g.flat / g.total * 100);
+
+    let verdict, color, hint;
+    if (g.bitter / g.total >= 0.5) {
+      verdict = 'SOUVENT AMER'; color = 'var(--cool)';
+      hint = 'Eau trop chaude. Baisse la temperature cible ou le temps d\'infusion.';
+    } else if (g.flat / g.total >= 0.5) {
+      verdict = 'SOUVENT FADE'; color = 'var(--warm)';
+      hint = 'Eau trop froide ou infusion trop courte. Monte la temperature ou le temps.';
+    } else if (g.perfect / g.total >= 0.5) {
+      verdict = 'BIEN CALIBRE'; color = 'var(--fg)';
+      hint = 'Reglages corrects pour ce the.';
+    } else {
+      verdict = 'IRREGULIER'; color = 'var(--fg-dim)';
+      hint = 'Resultats mitiges. Garde un volume et un dosage constants pour comparer.';
+    }
+
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1px solid var(--border); padding:12px; margin-bottom:8px;';
+    card.innerHTML =
+      '<div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px;">' +
+        '<span style="font-weight:700; font-size:14px;">' + g.name + '</span>' +
+        '<span style="color:' + color + '; font-size:11px; font-weight:700; white-space:nowrap;">' + verdict + '</span>' +
+      '</div>' +
+      '<div style="height:8px; display:flex; border:1px solid var(--border); margin-bottom:6px; overflow:hidden;">' +
+        '<span style="background:var(--cool); width:' + bitterPct + '%;"></span>' +
+        '<span style="background:var(--fg); width:' + perfectPct + '%;"></span>' +
+        '<span style="background:var(--warm); width:' + flatPct + '%;"></span>' +
+      '</div>' +
+      '<div style="font-size:11px; color:var(--fg-dim);">' +
+        'AMER ' + g.bitter + ' · PARFAIT ' + g.perfect + ' · FADE ' + g.flat +
+        ' · TOTAL ' + g.total +
+      '</div>' +
+      '<div style="font-size:11px; color:var(--fg-dim); margin-top:4px; line-height:1.4;">' + hint + '</div>';
+    wrap.appendChild(card);
+  });
+}
+
+function renderHistoryLog() {
+  const wrap = document.getElementById('historyLog');
+  wrap.innerHTML = '';
+
+  if (history.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:14px; color:var(--fg-dim); font-size:12px; border:1px solid var(--border);';
+    empty.textContent = '// AUCUNE INFUSION ENREGISTREE.';
+    wrap.appendChild(empty);
+    return;
+  }
+
+  const recent = history.slice(0, 50);
+  const list = document.createElement('div');
+  list.style.cssText = 'border:var(--line) solid var(--fg);';
+  recent.forEach((h, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; padding:12px 14px;' +
+      (i < recent.length - 1 ? ' border-bottom:1px solid var(--border);' : '');
+    row.innerHTML =
+      '<div>' +
+        '<div style="font-weight:700; font-size:13px;">' + h.teaName + '</div>' +
+        '<div style="font-size:11px; color:var(--fg-dim);">' + fmtStamp(h.at) +
+          ' · ' + h.temp + '°C · ' + fmtTime(h.time) +
+          (h.volume ? ' · ' + h.volume + 'ML' : '') + '</div>' +
+      '</div>' +
+      '<div style="color:' + (RATING_COLORS[h.rating] || 'var(--fg-dim)') +
+        '; font-weight:700; font-size:11px; text-align:right; white-space:nowrap;">' +
+        (RATING_LABELS[h.rating] || '?') + '</div>';
+    list.appendChild(row);
+  });
+  wrap.appendChild(list);
+}
+
+function clearHistory() {
+  if (!confirm('Vider tout l\'historique des infusions ?')) return;
+  history = [];
+  saveAll();
+  renderHistory();
+}
+
+/* =====================================================
+ *  EVENT BINDINGS
+ * ===================================================== */
+
+document.getElementById('btnAddTea').addEventListener('click', newCustomTea);
+document.getElementById('btnSettings').addEventListener('click', () => renderSettings());
+document.getElementById('btnAbout').addEventListener('click', () => show('about'));
+
+document.getElementById('btnBackSetup').addEventListener('click', () => { currentBrew = null; show('home'); });
+document.getElementById('btnStart').addEventListener('click', () => {
+  // Tap also unlocks audio context
+  ensureAudio();
+  startCooling();
+});
+
+document.getElementById('btnCoolMinus').addEventListener('click', () => {
+  if (timerState && timerState.phase === 'cooling') timerState.startedAt -= 30000;
+});
+document.getElementById('btnCoolSkip').addEventListener('click', () => startSteeping());
+document.getElementById('btnCoolAbort').addEventListener('click', () => {
+  if (confirm('Annuler ?')) abortTimer();
+});
+
+document.getElementById('btnSteepMinus').addEventListener('click', () => {
+  if (timerState && timerState.phase === 'steeping') timerState.startedAt -= 15000;
+});
+document.getElementById('btnSteepDone').addEventListener('click', () => finishBrew());
+document.getElementById('btnSteepAbort').addEventListener('click', () => {
+  if (confirm('Annuler ?')) abortTimer();
+});
+
+document.getElementById('btnRateBitter').addEventListener('click', () => logRating('bitter'));
+document.getElementById('btnRatePerfect').addEventListener('click', () => logRating('perfect'));
+document.getElementById('btnRateFlat').addEventListener('click', () => logRating('flat'));
+document.getElementById('btnDoneHome').addEventListener('click', () => { currentBrew = null; show('home'); });
+
+document.getElementById('btnHistory').addEventListener('click', renderHistory);
+document.getElementById('btnBackHistory').addEventListener('click', () => show('home'));
+document.getElementById('btnClearHistory').addEventListener('click', clearHistory);
+
+document.getElementById('btnBackSettings').addEventListener('click', () => show('home'));
+document.getElementById('btnBackTeaEdit').addEventListener('click', () => show('home'));
+document.getElementById('btnBackAbout').addEventListener('click', () => show('home'));
+
+document.getElementById('btnSaveTea').addEventListener('click', saveTeaForm);
+document.getElementById('btnAddContainer').addEventListener('click', addContainer);
+document.getElementById('btnExport').addEventListener('click', exportData);
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) importData(file);
+  e.target.value = '';  // allow re-importing the same filename later
+});
+document.getElementById('btnReset').addEventListener('click', resetAll);
+document.getElementById('btnNotifAsk').addEventListener('click', askNotifPermission);
+document.getElementById('btnCalibrate').addEventListener('click', calibrateAlpha);
+document.getElementById('btnGoCalibrate').addEventListener('click', renderCalibration);
+document.getElementById('btnBackCalibration').addEventListener('click', () => renderSettings());
+
+// Block double-tap zoom on iOS
+document.addEventListener('touchstart', () => {}, { passive: true });
+
+/* =====================================================
+ *  INIT
+ * ===================================================== */
+
+renderMeta();
+renderHome();
+show('home');
+</script>
+</body>
+</html>
