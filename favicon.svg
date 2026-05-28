@@ -1,12 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
-  <!-- Yerba leaves: 3 short horizontal marks peeking above the cup rim -->
-  <line x1="14" y1="14" x2="22" y2="14" stroke="#e8e3d3" stroke-width="2"/>
-  <line x1="24" y1="10" x2="34" y2="10" stroke="#e8e3d3" stroke-width="2"/>
-  <line x1="36" y1="14" x2="44" y2="14" stroke="#e8e3d3" stroke-width="2"/>
+  <!-- Empty tube outline -->
+  <rect x="28" y="8" width="8" height="40" fill="none" stroke="#e8e3d3" stroke-width="3"/>
 
-  <!-- Cup body: brutalist trapezoidal gourd (wider rim, narrower base) -->
-  <polygon points="8,18 56,18 52,56 12,56" fill="none" stroke="#e8e3d3" stroke-width="3" stroke-linejoin="miter"/>
+  <!-- Mercury column inside the tube, rising from bulb to mid-height -->
+  <rect x="30" y="24" width="4" height="28" fill="#e8e3d3"/>
 
-  <!-- Base serif accent (brutalist ground line) -->
-  <rect x="6" y="58" width="52" height="2" fill="#e8e3d3"/>
+  <!-- Bulb at the base (solid, covers the tube end) -->
+  <circle cx="32" cy="52" r="9" fill="#e8e3d3"/>
+
+  <!-- Graduation ticks on the right side: alternating major / minor -->
+  <rect x="40" y="14" width="6" height="2" fill="#e8e3d3"/>
+  <rect x="40" y="22" width="4" height="2" fill="#e8e3d3"/>
+  <rect x="40" y="30" width="6" height="2" fill="#e8e3d3"/>
+  <rect x="40" y="38" width="4" height="2" fill="#e8e3d3"/>
 </svg>
