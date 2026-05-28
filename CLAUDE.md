@@ -1,4 +1,4 @@
-# Honed.tea (formerly MateLog, formerly TeaLog)
+# Honed.te
 
 A single-file brutalist tea brewing assistant. Predicts how long boiled water needs to cool in an open kettle before reaching a tea's target steeping temperature, then runs the steeping timer. Built for a specific user with specific preferences. This document captures everything a future Claude session needs to continue the project without redoing the requirements interview.
 
