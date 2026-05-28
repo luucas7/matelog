@@ -2,20 +2,20 @@
   <!-- Background -->
   <rect width="64" height="64" fill="#0a0a0a"/>
 
-  <!-- Steam ribbons (3 lines, slightly offset for asymmetry) -->
-  <path d="M20 6 Q23 12 20 18 Q17 24 20 26" stroke="#e8e3d3" stroke-width="2" fill="none" stroke-linecap="square"/>
-  <path d="M32 4 Q35 11 32 18 Q29 24 32 26" stroke="#e8e3d3" stroke-width="2" fill="none" stroke-linecap="square"/>
-  <path d="M44 6 Q47 12 44 18 Q41 24 44 26" stroke="#e8e3d3" stroke-width="2" fill="none" stroke-linecap="square"/>
+  <!-- Bombilla mouthpiece: short horizontal cap on top of the straw -->
+  <line x1="38" y1="6" x2="46" y2="6" stroke="#e8e3d3" stroke-width="3" stroke-linecap="square"/>
 
-  <!-- Mug body: brutalist square cup -->
-  <rect x="12" y="28" width="32" height="28" fill="none" stroke="#e8e3d3" stroke-width="3"/>
+  <!-- Bombilla shaft: vertical metal straw, pierces the cup rim and stops inside -->
+  <line x1="42" y1="6" x2="42" y2="42" stroke="#e8e3d3" stroke-width="3" stroke-linecap="square"/>
 
-  <!-- Tea surface line near top of mug -->
-  <line x1="12" y1="34" x2="44" y2="34" stroke="#e8e3d3" stroke-width="2"/>
+  <!-- Yerba leaves: short horizontal marks peeking above the cup rim -->
+  <line x1="14" y1="28" x2="22" y2="28" stroke="#e8e3d3" stroke-width="2"/>
+  <line x1="24" y1="26" x2="32" y2="26" stroke="#e8e3d3" stroke-width="2"/>
+  <line x1="34" y1="28" x2="38" y2="28" stroke="#e8e3d3" stroke-width="2"/>
 
-  <!-- Handle: square bracket -->
-  <path d="M44 36 L54 36 L54 48 L44 48" fill="none" stroke="#e8e3d3" stroke-width="3" stroke-linejoin="miter"/>
+  <!-- Cup body: brutalist trapezoidal gourd (wider rim, narrower base) -->
+  <polygon points="12,30 52,30 48,58 16,58" fill="none" stroke="#e8e3d3" stroke-width="3" stroke-linejoin="miter"/>
 
-  <!-- Bottom serif accent (brutalist base) -->
-  <rect x="10" y="56" width="36" height="2" fill="#e8e3d3"/>
+  <!-- Base serif accent (brutalist ground line) -->
+  <rect x="10" y="60" width="44" height="2" fill="#e8e3d3"/>
 </svg>
