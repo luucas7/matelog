@@ -1,8 +1,8 @@
-# MateLog
+# Honed.tea
 
 Assistant d'infusion brutaliste, fichier unique. Calcule le temps d'attente pour que l'eau bouillie refroidisse jusqu'à la température cible de ton thé (loi de Newton), puis lance le timer d'infusion.
 
-En ligne : **https://luucas7.github.io/matelog/**
+En ligne : **https://luucas7.github.io/honed-tea/**
 
 ## Utilisation
 
@@ -38,7 +38,7 @@ Si tes thés sont systématiquement amers, baisse alpha. S'ils sont fades, monte
 
 ## Notifications
 
-Sur l'URL hébergée (HTTPS), tu peux activer les notifications système dans PARAMETRES > NOTIFICATIONS : utile sur PC pour être prévenu même si l'onglet est en arrière-plan. En complément, le titre de l'onglet clignote toujours quand le timer expire (aucune permission requise), et le bip audio + la vibration mobile sont actifs par défaut.
+Sur l'URL hébergée (HTTPS), tu peux activer les notifications système dans PARAMETRES > NOTIFICATIONS : utile sur PC pour être prévenu même si l'onglet est en arrière-plan. En complément, le titre de l'onglet clignote toujours quand le timer expire (aucune permission requise), et la vibration mobile est active par défaut (le bip audio a été retiré).
 
 ## Sauvegarde
 

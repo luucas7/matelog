@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0a0a">
-<title>MATE.LOG</title>
+<title>HONED.TEA</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -443,7 +443,7 @@
 <body>
 
 <header>
-  <div class="logo">MATE.LOG<span class="blink"></span></div>
+  <div class="logo">HONED.TEA<span class="blink"></span></div>
   <div class="meta">
     <div id="metaAmb">AMB ~20&deg;C</div>
     <div id="metaContainer">--</div>
@@ -781,7 +781,7 @@
   <div class="section">
     <div class="section-label">A PROPOS</div>
     <div style="font-size:13px; line-height:1.6;">
-      <p><b>MATE.LOG</b> calcule le temps d'attente pour que l'eau bouillie atteigne la temperature cible de ton the, en utilisant la loi de refroidissement de Newton.</p>
+      <p><b>HONED.TEA</b> calcule le temps d'attente pour que l'eau bouillie atteigne la temperature cible de ton the, en utilisant la loi de refroidissement de Newton.</p>
       <br>
       <p>Formule appliquee:</p>
       <p style="color:var(--fg-dim); font-size:12px;">T(t) = Tamb + (T0 - Tamb) &middot; exp(-k&middot;t)<br>k = alpha &middot; D&sup2; / V</p>
@@ -852,17 +852,22 @@ const DEFAULT_CONTAINERS = [
 ];
 
 const STORE_KEYS = {
-  settings:    'matelog.settings',
-  containers:  'matelog.containers',
-  customTeas:  'matelog.customTeas',
-  history:     'matelog.history',
+  settings:    'honed.settings',
+  containers:  'honed.containers',
+  customTeas:  'honed.customTeas',
+  history:     'honed.history',
 };
 
-// One-shot migration: data was stored under 'tealog.*' keys before the rename.
-// Move any legacy entries over and clear the old ones so localStorage stays tidy.
+// One-shot migration: data was stored under 'tealog.*' then 'matelog.*' keys
+// before successive renames. Move any legacy entries over to 'honed.*' and clear
+// the old ones. 'matelog.*' is listed first so it wins if both legacy sets exist.
 // Safe to keep running indefinitely (no-op once migration is done).
 (function migrateLegacyKeys() {
   const legacy = {
+    'matelog.settings':   STORE_KEYS.settings,
+    'matelog.containers': STORE_KEYS.containers,
+    'matelog.customTeas': STORE_KEYS.customTeas,
+    'matelog.history':    STORE_KEYS.history,
     'tealog.settings':    STORE_KEYS.settings,
     'tealog.containers':  STORE_KEYS.containers,
     'tealog.customTeas':  STORE_KEYS.customTeas,
@@ -1258,19 +1263,13 @@ function beep(freq, durationMs, volume) {
   osc.stop(audioCtx.currentTime + durationMs/1000);
 }
 function alarm() {
-  ensureAudio();
-  if (audioCtx) {
-    // Loud triple beep with descending pitch for distinctiveness
-    beep(1200, 250, 0.5);
-    setTimeout(() => beep(1200, 250, 0.5), 350);
-    setTimeout(() => beep(1200, 600, 0.5), 700);
-  }
-  // Vibrate if supported (mobile only, no-op on PC)
-  if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+  // Audio disabled by user preference: vibration only on mobile, title flash on PC.
+  // Strong, repeated buzz pattern so the phone is unmissable on a table.
+  if (navigator.vibrate) navigator.vibrate([400, 150, 400]);
   // PC-friendly visual: title bar flashing (always on, no permission needed)
   startTitleFlash('TEMPS ECOULE');
   // PC-friendly system notification (opt-in, see settings)
-  systemNotify('MATE.LOG', currentBrew ? currentBrew.tea.name + ' : temps ecoule' : 'Temps ecoule');
+  systemNotify('HONED.TEA', currentBrew ? currentBrew.tea.name + ' : temps ecoule' : 'Temps ecoule');
 }
 
 /* ---------- TAB TITLE FLASH ---------- */
@@ -1300,7 +1299,7 @@ function systemNotify(title, body) {
     const n = new Notification(title, {
       body: body,
       icon: 'favicon.svg',
-      tag: 'matelog-timer',      // collapse repeats
+      tag: 'honedtea-timer',     // collapse repeats
       requireInteraction: true,  // stays until user dismisses
     });
     n.onclick = () => { try { window.focus(); } catch(e){} n.close(); };
@@ -1673,7 +1672,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'matelog-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'honedtea-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -1690,7 +1689,7 @@ function importData(file) {
     }
     if (!data || typeof data !== 'object' ||
         (!data.settings && !data.containers && !data.customTeas && !data.history)) {
-      alert('Fichier non reconnu : aucune donnee MateLog trouvee.');
+      alert('Fichier non reconnu : aucune donnee Honed.tea trouvee.');
       return;
     }
     if (!confirm('Importer ce fichier ecrasera tes donnees actuelles. Continuer ?')) return;

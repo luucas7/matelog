@@ -37,6 +37,7 @@ $RECYCLE.BIN/
 # Local backup exports the app may produce
 tealog-*.json
 matelog-*.json
+honedtea-*.json
 
 # Node (defensive, no build step currently)
 node_modules/

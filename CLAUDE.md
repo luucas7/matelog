@@ -1,4 +1,4 @@
-# MateLog (formerly TeaLog)
+# Honed.tea (formerly MateLog, formerly TeaLog)
 
 A single-file brutalist tea brewing assistant. Predicts how long boiled water needs to cool in an open kettle before reaching a tea's target steeping temperature, then runs the steeping timer. Built for a specific user with specific preferences. This document captures everything a future Claude session needs to continue the project without redoing the requirements interview.
 
@@ -28,7 +28,7 @@ These are non-negotiable unless the user explicitly changes them.
 7. **Ambient temperature**: default 20C, user-adjustable via slider (5 to 35). Auto-detection via geolocation was rejected because outdoor temp is a poor proxy for indoor temp.
 8. **Tea library structure**: 12 standard categories preloaded, sorted by temperature ascending. On home screen, only 5 "popular" categories are shown by default (green, oolong, black, mate, herbal). A toggle reveals the remaining 7. Users can also add their own named teas, each linked to a category, with optional notes.
 9. **Bouilloire calibration**: defaults are modifiable (diameter 9cm, alpha 0.010). A dedicated calibration page lets the user input one measurement (volume, time elapsed, measured temperature) and the app inverse-solves Newton to compute exact alpha.
-10. **Notifications**: loud audible beep + vibration at timer end (Web Audio API square wave, three beeps, plus `navigator.vibrate`). The tab title also flashes (always on, no permission required) so the alarm is visible from the OS taskbar on desktop. An opt-in system notification via the `Notification` API is available, toggled by a button in PARAMETRES > NOTIFICATIONS; this works on `https://` and `localhost`, on `file://` only Firefox honors it. No toast, no popup beyond the visual timer turning red.
+10. **Notifications**: vibration only at timer end (`navigator.vibrate`, two short buzzes). Audio was disabled at user request because the beep was unpleasant. The tab title also flashes (always on, no permission required) so the alarm is visible from the OS taskbar on desktop. An opt-in system notification via the `Notification` API is available, toggled by a button in PARAMETRES > NOTIFICATIONS; this works on `https://` and `localhost`, on `file://` only Firefox honors it. No toast, no popup beyond the visual timer turning red.
 11. **Concurrency**: one timer at a time. No multi-tea parallel brewing.
 12. **Screen behavior**: Wake Lock API engaged during timers to keep the screen on. Released on timer end or abort.
 13. **PWA**: not wanted. Plain HTML, opened in browser, bookmarked.
@@ -88,14 +88,14 @@ To add a category, append an object to `CATEGORIES`. To change which categories 
 ## File structure
 
 ```
-matelog/
+honed-tea/
   index.html      Single-file app, contains HTML + CSS + JS inline
-  favicon.svg     Brutalist mug icon (32x32 SVG, monochrome)
+  favicon.png     Brutalist teacup pictogram
   CLAUDE.md       This file
   README.md       Short user-facing summary
 ```
 
-The project was previously called TeaLog. It was renamed to MateLog (UI shown as `MATE.LOG`) when the user moved the repo to `github.com/luucas7/matelog` and started serving it at `https://luucas7.github.io/matelog/`. A one-shot migration in `index.html` copies any pre-existing `tealog.*` localStorage entries to `matelog.*` and removes the old keys; the migration block is idempotent and safe to leave in indefinitely.
+The project was previously called TeaLog, then MateLog. It was renamed to Honed.tea (UI shown as `HONED.TEA`) to better reflect its actual purpose: improving brewing precision over time via calibration and rated history, rather than naming itself after one specific drink (maté). The repo is expected at `github.com/luucas7/honed-tea` and served at `https://luucas7.github.io/honed-tea/`. A one-shot migration in `index.html` copies any pre-existing `tealog.*` and `matelog.*` localStorage entries to `honed.*` and removes the old keys; the migration block is idempotent and safe to leave in indefinitely.
 
 No build step. No package.json. No dependencies installed locally. The only external resource is Google Fonts (JetBrains Mono), loaded over the network. The app degrades gracefully to a system monospace if Google Fonts is unreachable.
 
@@ -119,12 +119,12 @@ Single-file SPA. State is held in module-level variables. Views are `<main>` ele
 ### Persistence
 
 `localStorage` with four keys:
-- `matelog.settings`: `{ ambientTemp, kettleDiameter, alpha, defaultContainerId, lastVolume }`
-- `matelog.containers`: `[{ id, name, volume }]`
-- `matelog.customTeas`: `[{ id, name, categoryId, temp, time, dose, notes }]`
-- `matelog.history`: `[{ id, teaKey, teaName, categoryId, temp, time, volume, rating, at }]` newest first, capped at 500. `rating` is one of `bitter` / `perfect` / `flat`. `teaKey` is `kind:id` (e.g. `category:green`, `custom:tea_...`) and is the grouping key for analysis.
+- `honed.settings`: `{ ambientTemp, kettleDiameter, alpha, defaultContainerId, lastVolume }`
+- `honed.containers`: `[{ id, name, volume }]`
+- `honed.customTeas`: `[{ id, name, categoryId, temp, time, dose, notes }]`
+- `honed.history`: `[{ id, teaKey, teaName, categoryId, temp, time, volume, rating, at }]` newest first, capped at 500. `rating` is one of `bitter` / `perfect` / `flat`. `teaKey` is `kind:id` (e.g. `category:green`, `custom:tea_...`) and is the grouping key for analysis.
 
-Legacy keys `tealog.*` are automatically migrated to `matelog.*` on first load by the `migrateLegacyKeys` IIFE near the top of `index.html`.
+Legacy keys `tealog.*` and `matelog.*` are automatically migrated to `honed.*` on first load by the `migrateLegacyKeys` IIFE near the top of `index.html`. `matelog.*` is preferred over `tealog.*` if both somehow exist.
 
 Legacy custom teas saved before the `dose` field exists are tolerated: `resolveDose(tea)` falls back to the tea's category dose, then to 2.0 g/100mL.
 
@@ -138,9 +138,9 @@ Both timers use `requestAnimationFrame` driven by `Date.now()` deltas, NOT `setI
 
 Wake Lock is reacquired on `visibilitychange` if the page comes back to foreground during an active timer.
 
-### Audio
+### Audio / vibration
 
-Web Audio API, lazily created on first user interaction (needed for autoplay policies). Square wave oscillator, 1200Hz, three pulses (250ms / 250ms / 600ms). Vibration pattern via `navigator.vibrate([200, 100, 200, 100, 400])` if supported.
+Audio alarm was removed at user request (beep was unpleasant). The Web Audio API helpers (`ensureAudio`, `beep`) remain in the file in case audio is reintroduced later, but `alarm()` no longer calls them. The only alarm sensory output on mobile is `navigator.vibrate([400, 150, 400])` (two short buzzes).
 
 ### Alarm extras (PC-oriented)
 
@@ -179,7 +179,7 @@ Default container: `{ id: 'thermos', name: 'THERMOS', volume: 450 }`.
 
 **Change color theme**: edit the CSS variables in `:root` at the top of the `<style>` block.
 
-**Change the audio alarm**: edit the `alarm()` function. The `beep(freq, durationMs, volume)` helper plays a single square wave.
+**Change the alarm pattern**: edit the `alarm()` function (currently vibration-only). The `beep(freq, durationMs, volume)` helper is still defined and plays a single square wave if you want to reintroduce audio.
 
 **Add a new view**: 
 1. Add a `<main id="view-newname" class="hidden">` block in HTML
