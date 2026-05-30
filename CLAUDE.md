@@ -64,7 +64,7 @@ The default in code is 0.010. The recommended value for the user's Tefal Uno KO1
 
 ## Tea categories (preloaded)
 
-Stored in the `CATEGORIES` array. Format: `{ id, name, temp (C), time (seconds), dose (g per 100 mL), popular (bool) }`. `dose` is the western brewing leaf-to-water ratio; the setup screen multiplies it by the boiled volume to show the leaf quantity in grams, which auto-follows volume changes.
+Stored in the `CATEGORIES` array. Format: `{ id, name, temp (C), time (seconds), dose (g per 100 mL), popular (bool), presets? }`. `dose` is the western brewing leaf-to-water ratio; the setup screen multiplies it by the boiled volume to show the leaf quantity in grams, which auto-follows volume changes. `presets` is an optional `[{ label, time }]` array of named alternate durations (mate ships with `DOUX` 240s and `CORSE` 300s). When present, the setup screen shows brutalist chips letting the user pick a duration; the first preset is the default. Custom teas can carry the same `presets` field via the editor's "DUREES SUPPLEMENTAIRES" textarea (one preset per line, format: `LABEL MM:SS`).
 
 | ID            | Name              | Temp | Time | Dose | Popular |
 |---------------|-------------------|------|------|------|---------|
@@ -121,8 +121,8 @@ Single-file SPA. State is held in module-level variables. Views are `<main>` ele
 `localStorage` with four keys:
 - `honed.settings`: `{ ambientTemp, kettleDiameter, alpha, defaultContainerId, lastVolume }`
 - `honed.containers`: `[{ id, name, volume }]`
-- `honed.customTeas`: `[{ id, name, categoryId, temp, time, dose, notes }]`
-- `honed.history`: `[{ id, teaKey, teaName, categoryId, temp, time, volume, rating, at }]` newest first, capped at 500. `rating` is one of `bitter` / `perfect` / `flat`. `teaKey` is `kind:id` (e.g. `category:green`, `custom:tea_...`) and is the grouping key for analysis.
+- `honed.customTeas`: `[{ id, name, categoryId, temp, time, dose, notes, presets? }]` where `presets` is an optional `[{ label, time }]` array (see Tea categories section).
+- `honed.history`: `[{ id, teaKey, teaName, categoryId, temp, time, preset?, volume, rating, at }]` newest first, capped at 500. `rating` is one of `bitter` / `perfect` / `flat`. `teaKey` is `kind:id` (e.g. `category:green`, `custom:tea_...`) and is the grouping key for analysis. `preset` is the label of the duration preset chosen at brew time, when applicable.
 
 Legacy keys `tealog.*` and `matelog.*` are automatically migrated to `honed.*` on first load by the `migrateLegacyKeys` IIFE near the top of `index.html`. `matelog.*` is preferred over `tealog.*` if both somehow exist.
 

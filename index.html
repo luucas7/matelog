@@ -408,6 +408,39 @@
   /* HIDDEN HELPER */
   .hidden { display: none !important; }
 
+  /* PRESET CHIPS (multiple durations per tea) */
+  .preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .preset-chip {
+    padding: 10px 14px;
+    border: var(--line) solid var(--border);
+    background: var(--bg);
+    color: var(--fg-dim);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .preset-chip.active {
+    border-color: var(--fg);
+    background: var(--bg-elev);
+    color: var(--fg);
+  }
+  .preset-chip:active { transform: translate(1px, 1px); }
+  .preset-chip .pc-time {
+    color: var(--fg-dim);
+    font-weight: 400;
+  }
+  .preset-chip.active .pc-time { color: var(--fg-dim); }
+
   /* AVAILABLE TEMP DISPLAY */
   .target-row {
     display: grid;
@@ -480,6 +513,8 @@
     <div class="section-label">PREPARATION</div>
     <div id="setupTeaInfo" style="font-size:18px; font-weight:700; margin-bottom:4px;"></div>
     <div id="setupTeaSubInfo" style="font-size:12px; color:var(--fg-dim); margin-bottom:16px;"></div>
+
+    <div class="preset-row hidden" id="setupPresets"></div>
 
     <div class="target-row" style="grid-template-columns:1fr 1fr 1fr;">
       <div>
@@ -768,6 +803,13 @@
       </div>
     </div>
     <div class="field" style="margin-top:12px;">
+      <label>DUREES SUPPLEMENTAIRES (OPTIONNEL)</label>
+      <textarea id="teaEditPresets" rows="3" placeholder="UNE LIGNE PAR PRESET, FORMAT: NOM MM:SS&#10;EX:&#10;DOUX 04:00&#10;CORSE 05:00"></textarea>
+      <div style="font-size:11px; color:var(--fg-dim); margin-top:4px;">
+        Laisse vide pour une duree unique. Sinon la premiere ligne devient le defaut au demarrage.
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px;">
       <label>NOTES (OPTIONNEL)</label>
       <textarea id="teaEditNotes" rows="4" placeholder="Notes d'infusion, origine, observations..."></textarea>
     </div>
@@ -834,7 +876,8 @@ const CATEGORIES = [
   { id: 'puerh_shou',  name: 'PU-ERH SOMBRE',       temp: 95,  time: 240, dose: 2.5, popular: false },
   { id: 'puerh_sheng', name: 'PU-ERH CRU',          temp: 90,  time: 210, dose: 2.5, popular: false },
   { id: 'rooibos',     name: 'ROOIBOS',             temp: 100, time: 360, dose: 2.5, popular: false },
-  { id: 'mate',        name: 'MATE',                temp: 75,  time: 240, dose: 2.5, popular: true  },
+  { id: 'mate',        name: 'MATE',                temp: 75,  time: 240, dose: 2.5, popular: true,
+    presets: [{ label: 'DOUX', time: 240 }, { label: 'CORSE', time: 300 }] },
   { id: 'herbal',      name: 'TISANE',              temp: 100, time: 480, dose: 2.0, popular: true  },
   { id: 'fruit',       name: 'INFUSION FRUITS',     temp: 100, time: 600, dose: 2.5, popular: false },
 ];
@@ -983,6 +1026,30 @@ function leafGrams(dosePer100, volumeML) {
   return dosePer100 * volumeML / 100;
 }
 
+// Parse a multi-line presets blob (one per line, "LABEL MM:SS" or "LABEL <seconds>").
+// Returns { presets: [...] } on success, { error: '...' } on bad input, or null if empty.
+function parsePresets(str) {
+  if (!str) return null;
+  const lines = String(str).split('\n').map(s => s.trim()).filter(Boolean);
+  if (lines.length === 0) return null;
+  const out = [];
+  for (const line of lines) {
+    const m = line.match(/^(.+?)\s+(\d{1,2}:\d{2}|\d+)$/);
+    if (!m) return { error: 'Format invalide : "' + line + '". Attendu : NOM MM:SS' };
+    const label = m[1].trim().toUpperCase();
+    const t = parseTime(m[2]);
+    if (!t || t < 5) return { error: 'Duree invalide pour "' + label + '"' };
+    out.push({ label: label, time: t });
+  }
+  return { presets: out };
+}
+
+// Render presets list back into the textarea-friendly format used by parsePresets.
+function formatPresets(presets) {
+  if (!presets || !presets.length) return '';
+  return presets.map(p => p.label + ' ' + fmtTime(p.time)).join('\n');
+}
+
 function fmtGrams(g) {
   return (Math.round(g * 10) / 10).toString();
 }
@@ -1048,6 +1115,7 @@ function renderHome() {
       time: cat.time,
       dose: cat.dose,
       notes: '',
+      presets: cat.presets || null,
     }));
     list.appendChild(b);
   });
@@ -1097,6 +1165,7 @@ function renderHome() {
         time: tea.time,
         dose: resolveDose(tea),
         notes: tea.notes || '',
+        presets: tea.presets || null,
       }));
       wrap.appendChild(btn);
 
@@ -1132,16 +1201,23 @@ function currentContainer() {
 }
 
 function startSetup(tea) {
+  // If the tea defines named duration presets, default to the first one;
+  // otherwise the canonical time is the only choice.
+  const presets = (tea.presets && tea.presets.length) ? tea.presets : null;
+  const defaultPreset = presets ? presets[0] : null;
   currentBrew = {
     tea: tea,
     volume: settings.lastVolume,
     containerId: settings.defaultContainerId,
+    time: defaultPreset ? defaultPreset.time : tea.time,
+    presetLabel: defaultPreset ? defaultPreset.label : null,
   };
   document.getElementById('setupTeaInfo').textContent = tea.name;
   document.getElementById('setupTeaSubInfo').textContent =
     tea.kind === 'category' ? 'CATEGORIE STANDARD' : 'THE PERSONNEL';
   document.getElementById('setupTemp').textContent = tea.temp;
-  document.getElementById('setupTime').textContent = fmtTime(tea.time);
+  document.getElementById('setupTime').textContent = fmtTime(currentBrew.time);
+  renderPresetChips();
 
   // Container select
   const sel = document.getElementById('setupContainer');
@@ -1191,6 +1267,30 @@ function startSetup(tea) {
 
   updateEstimate();
   show('setup');
+}
+
+function renderPresetChips() {
+  const wrap = document.getElementById('setupPresets');
+  wrap.innerHTML = '';
+  const presets = currentBrew && currentBrew.tea && currentBrew.tea.presets;
+  if (!presets || !presets.length) {
+    wrap.classList.add('hidden');
+    return;
+  }
+  wrap.classList.remove('hidden');
+  presets.forEach(p => {
+    const chip = document.createElement('button');
+    const isActive = currentBrew.presetLabel === p.label && currentBrew.time === p.time;
+    chip.className = 'preset-chip' + (isActive ? ' active' : '');
+    chip.innerHTML = p.label + '<span class="pc-time">' + fmtTime(p.time) + '</span>';
+    chip.addEventListener('click', () => {
+      currentBrew.time = p.time;
+      currentBrew.presetLabel = p.label;
+      document.getElementById('setupTime').textContent = fmtTime(p.time);
+      renderPresetChips();
+    });
+    wrap.appendChild(chip);
+  });
 }
 
 function updateEstimate() {
@@ -1420,11 +1520,14 @@ function startSteeping() {
   timerState = {
     phase: 'steeping',
     startedAt: Date.now(),
-    totalSec: currentBrew.tea.time,
+    totalSec: currentBrew.time,
     fired: false,
   };
 
-  document.getElementById('steepTeaName').textContent = currentBrew.tea.name;
+  const steepLabel = currentBrew.presetLabel
+    ? currentBrew.tea.name + ' [' + currentBrew.presetLabel + ']'
+    : currentBrew.tea.name;
+  document.getElementById('steepTeaName').textContent = steepLabel;
   document.getElementById('steepTemp').textContent = currentBrew.tea.temp;
   show('steeping');
   tickSteeping();
@@ -1479,6 +1582,7 @@ function newCustomTea() {
   document.getElementById('teaEditTemp').value = 80;
   document.getElementById('teaEditTime').value = '03:00';
   document.getElementById('teaEditDose').value = 2.5;
+  document.getElementById('teaEditPresets').value = '';
   document.getElementById('teaEditNotes').value = '';
 
   const sel = document.getElementById('teaEditCategory');
@@ -1492,13 +1596,14 @@ function newCustomTea() {
   // Default to black
   sel.value = 'black';
 
-  // When category changes, prefill temp/time/dose
+  // When category changes, prefill temp/time/dose/presets from the category template.
   sel.onchange = () => {
     const c = CATEGORIES.find(x => x.id === sel.value);
     if (c) {
       document.getElementById('teaEditTemp').value = c.temp;
       document.getElementById('teaEditTime').value = fmtTime(c.time);
       document.getElementById('teaEditDose').value = c.dose;
+      document.getElementById('teaEditPresets').value = formatPresets(c.presets);
     }
   };
 
@@ -1514,6 +1619,7 @@ function editCustomTea(id) {
   document.getElementById('teaEditTemp').value = tea.temp;
   document.getElementById('teaEditTime').value = fmtTime(tea.time);
   document.getElementById('teaEditDose').value = resolveDose(tea);
+  document.getElementById('teaEditPresets').value = formatPresets(tea.presets);
   document.getElementById('teaEditNotes').value = tea.notes || '';
 
   const sel = document.getElementById('teaEditCategory');
@@ -1537,20 +1643,29 @@ function saveTeaForm() {
   const dose = parseFloat(document.getElementById('teaEditDose').value);
   const notes = document.getElementById('teaEditNotes').value.trim();
   const categoryId = document.getElementById('teaEditCategory').value;
+  const presetsParsed = parsePresets(document.getElementById('teaEditPresets').value);
 
   if (!name) { alert('Nom obligatoire.'); return; }
   if (isNaN(temp) || temp < 40 || temp > 100) { alert('Temperature entre 40 et 100.'); return; }
   if (!time || time < 5) { alert('Duree invalide. Format MM:SS.'); return; }
   if (isNaN(dose) || dose <= 0 || dose > 20) { alert('Dose invalide (g/100mL).'); return; }
+  if (presetsParsed && presetsParsed.error) { alert(presetsParsed.error); return; }
+  const presets = presetsParsed ? presetsParsed.presets : null;
 
   if (editingTeaId) {
     const t = customTeas.find(x => x.id === editingTeaId);
-    if (t) { t.name = name; t.temp = temp; t.time = time; t.dose = dose; t.notes = notes; t.categoryId = categoryId; }
+    if (t) {
+      t.name = name; t.temp = temp; t.time = time; t.dose = dose;
+      t.notes = notes; t.categoryId = categoryId;
+      if (presets) t.presets = presets; else delete t.presets;
+    }
   } else {
-    customTeas.push({
+    const tea = {
       id: 'tea_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
       name: name, temp: temp, time: time, dose: dose, notes: notes, categoryId: categoryId,
-    });
+    };
+    if (presets) tea.presets = presets;
+    customTeas.push(tea);
   }
   saveAll();
   show('home');
@@ -1794,7 +1909,8 @@ function logRating(rating) {
       categoryId: currentBrew.tea.categoryId ||
         (currentBrew.tea.kind === 'category' ? currentBrew.tea.id : null),
       temp: currentBrew.tea.temp,
-      time: currentBrew.tea.time,
+      time: currentBrew.time,
+      preset: currentBrew.presetLabel || null,
       volume: currentBrew.volume,
       rating: rating,
       at: new Date().toISOString(),
@@ -1900,9 +2016,11 @@ function renderHistoryLog() {
     const row = document.createElement('div');
     row.style.cssText = 'display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; padding:12px 14px;' +
       (i < recent.length - 1 ? ' border-bottom:1px solid var(--border);' : '');
+    const teaNameHtml = h.teaName +
+      (h.preset ? ' <span style="color:var(--fg-dim); font-weight:400;">[' + h.preset + ']</span>' : '');
     row.innerHTML =
       '<div>' +
-        '<div style="font-weight:700; font-size:13px;">' + h.teaName + '</div>' +
+        '<div style="font-weight:700; font-size:13px;">' + teaNameHtml + '</div>' +
         '<div style="font-size:11px; color:var(--fg-dim);">' + fmtStamp(h.at) +
           ' · ' + h.temp + '°C · ' + fmtTime(h.time) +
           (h.volume ? ' · ' + h.volume + 'ML' : '') + '</div>' +
