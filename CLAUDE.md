@@ -12,7 +12,7 @@ This is a self-contained HTML+CSS+JS app, no build step, no dependencies except 
 - **Language for code and comments**: English.
 - **User tone preference**: critical, logical, no flattery.
 - **Banned**: em-dashes in any prose addressed to the user.
-- **Platform target**: Android (Chrome / Firefox), opened as a browser bookmark. Not a PWA.
+- **Platform target**: Android (Chrome / Firefox), installable as a PWA. Also works as a regular bookmark, and degrades to a working `file://` open for local testing.
 - **Kettle owned**: Tefal Uno KO1508 (1.5L, plastic, 2400W, fixed 100C, no temperature control). Estimated alpha = 0.007 (unverified, requires thermometer to confirm).
 
 ## Functional specifications (from requirements interview)
@@ -31,7 +31,7 @@ These are non-negotiable unless the user explicitly changes them.
 10. **Notifications**: vibration only at timer end (`navigator.vibrate`, two short buzzes). Audio was disabled at user request because the beep was unpleasant. The tab title also flashes (always on, no permission required) so the alarm is visible from the OS taskbar on desktop. An opt-in system notification via the `Notification` API is available, toggled by a button in PARAMETRES > NOTIFICATIONS; this works on `https://` and `localhost`, on `file://` only Firefox honors it. No toast, no popup beyond the visual timer turning red.
 11. **Concurrency**: one timer at a time. No multi-tea parallel brewing.
 12. **Screen behavior**: Wake Lock API engaged during timers to keep the screen on. Released on timer end or abort.
-13. **PWA**: not wanted. Plain HTML, opened in browser, bookmarked.
+13. **PWA**: yes. The app is installable (`manifest.webmanifest` + `sw.js`), works offline after first load, and surfaces timer notifications through the OS via the Service Worker. Still opens correctly as a plain bookmark or via `file://` for local hacking (the SW registration silently fails on `file://` and the app falls back to `new Notification()`).
 14. **Visual style**: brutalist / terminal / mono. JetBrains Mono, no border-radius, thick borders, all-uppercase labels, subtle CRT scanline overlay, blinking cursor block in header.
 
 ## Physical model
@@ -89,10 +89,12 @@ To add a category, append an object to `CATEGORIES`. To change which categories 
 
 ```
 honed-tea/
-  index.html      Single-file app, contains HTML + CSS + JS inline
-  favicon.png     Brutalist teacup pictogram
-  CLAUDE.md       This file
-  README.md       Short user-facing summary
+  index.html             Single-file app, contains HTML + CSS + JS inline
+  manifest.webmanifest   PWA manifest (name, icons, theme, display:standalone)
+  sw.js                  Service Worker: shell cache + notification rendering
+  favicon.png            Brutalist teacup pictogram, also used as PWA icon
+  CLAUDE.md              This file
+  README.md              Short user-facing summary
 ```
 
 The project was previously called TeaLog, then MateLog. It was renamed to Honed.tea (UI shown as `HONED.TEA`) to better reflect its actual purpose: improving brewing precision over time via calibration and rated history, rather than naming itself after one specific drink (maté). The repo is expected at `github.com/luucas7/honed-tea` and served at `https://luucas7.github.io/honed-tea/`. A one-shot migration in `index.html` copies any pre-existing `tealog.*` and `matelog.*` localStorage entries to `honed.*` and removes the old keys; the migration block is idempotent and safe to leave in indefinitely.
@@ -144,7 +146,21 @@ Audio alarm was removed at user request (beep was unpleasant). The Web Audio API
 
 ### Alarm extras (PC-oriented)
 
-`alarm()` also calls `startTitleFlash('TEMPS ECOULE')` which toggles `document.title` between `[!] TEMPS ECOULE` and the original every 700ms, and `systemNotify()` which fires a `Notification` if permission was granted via PARAMETRES > NOTIFICATIONS. The title flash is cancelled by `stopTitleFlash()`, called from `show()` on any view change, from the `visibilitychange` handler when the tab regains focus, and is automatically reset at the next alarm. System notifications require an `https://`, `localhost`, or (Firefox only) `file://` origin.
+`alarm()` also calls `startTitleFlash('TEMPS ECOULE')` which toggles `document.title` between `[!] TEMPS ECOULE` and the original every 700ms, and `systemNotify()` which surfaces a notification through the Service Worker (or a legacy `new Notification()` on `file://`). The notification body is rich: tea name, preset label if any, target temperature, chosen infusion time, leaf grams. The title flash is cancelled by `stopTitleFlash()`, called from `show()` on any view change, from the `visibilitychange` handler when the tab regains focus, and is automatically reset at the next alarm. System notifications require an `https://`, `localhost`, or (Firefox only) `file://` origin.
+
+### Service Worker (sw.js)
+
+The SW does two things:
+
+1. **Shell cache**, offline-first. `SHELL_CACHE` (currently `honed-tea-shell-v1`) precaches `index.html`, `favicon.png`, `manifest.webmanifest`. Google Fonts go in `FONTS_CACHE` with a stale-while-revalidate strategy. Cache names are versioned; bump `-v1` to `-v2` (etc.) whenever you ship a change to a precached asset, otherwise old clients keep the stale version. On `activate`, any cache name not in the current `keep` set is deleted.
+
+2. **Notification rendering and click routing**. The page fires `registration.showNotification(...)` from `systemNotify()` so the OS owns the notification (proper backgrounding, tag-based replacement, vibrate). The SW's `notificationclick` handler focuses the existing PWA window if open, otherwise opens `./`.
+
+The SW never schedules anything. The page stays alive during a brew (Wake Lock) and triggers alarms itself. Closing the page mid-brew means no notification: this is acceptable per the app's "one timer at a time, screen on" model.
+
+`clearStaleNotifications()` runs at app boot and at the start of every cooling phase. It uses `registration.getNotifications({tag:'honedtea-timer'})` to dismiss any leftover timer notif so the user never sees an orphan from a previous brew.
+
+On `controllerchange`, the page does a one-shot `window.location.reload()` so new SW assets take effect without a manual refresh. `skipWaiting()` + `clients.claim()` in `sw.js` make this immediate.
 
 ## Default settings
 

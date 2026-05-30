@@ -1,0 +1,16 @@
+{
+  "name": "Honed.tea",
+  "short_name": "Honed.tea",
+  "description": "Assistant d'infusion brutaliste : refroidissement bouilloire + timer.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a",
+  "lang": "fr",
+  "icons": [
+    { "src": "favicon.png", "sizes": "any", "type": "image/png" },
+    { "src": "favicon.png", "sizes": "any", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

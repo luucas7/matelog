@@ -6,6 +6,11 @@
 <meta name="theme-color" content="#0a0a0a">
 <title>HONED.TEA</title>
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Honed.tea">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -1368,8 +1373,24 @@ function alarm() {
   if (navigator.vibrate) navigator.vibrate([400, 150, 400]);
   // PC-friendly visual: title bar flashing (always on, no permission needed)
   startTitleFlash('TEMPS ECOULE');
-  // PC-friendly system notification (opt-in, see settings)
-  systemNotify('HONED.TEA', currentBrew ? currentBrew.tea.name + ' : temps ecoule' : 'Temps ecoule');
+  // System notification with full brew context. Goes through the SW when
+  // available so it survives the page being backgrounded.
+  if (currentBrew) {
+    const tea = currentBrew.tea;
+    const presetTag = currentBrew.presetLabel ? ' [' + currentBrew.presetLabel + ']' : '';
+    const grams = fmtGrams(leafGrams(resolveDose(tea), currentBrew.volume));
+    const body =
+      tea.name + presetTag + ' · ' +
+      tea.temp + '°C · ' +
+      fmtTime(currentBrew.time) + ' · ' +
+      grams + 'G';
+    systemNotify('HONED.TEA : TEMPS ECOULE', body, {
+      teaKey: tea.kind + ':' + tea.id,
+      at: Date.now(),
+    });
+  } else {
+    systemNotify('HONED.TEA', 'Temps ecoule');
+  }
 }
 
 /* ---------- TAB TITLE FLASH ---------- */
@@ -1392,18 +1413,49 @@ function stopTitleFlash() {
 }
 
 /* ---------- SYSTEM NOTIFICATION ---------- */
-function systemNotify(title, body) {
+// Prefer ServiceWorkerRegistration.showNotification() so the OS owns the
+// notification (better backgrounding behavior, proper tag replacement,
+// vibrate support). Fall back to `new Notification()` only for file:// or
+// browsers without SW support.
+async function systemNotify(title, body, data) {
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
+  const options = {
+    body: body,
+    icon: 'favicon.png',
+    badge: 'favicon.png',
+    tag: 'honedtea-timer',     // collapse repeats: new notif replaces old
+    renotify: true,            // re-buzz when a same-tag notif replaces another
+    requireInteraction: true,  // stays until user dismisses
+    vibrate: [400, 150, 400],
+    data: data || {},
+  };
   try {
-    const n = new Notification(title, {
-      body: body,
-      icon: 'favicon.png',
-      tag: 'honedtea-timer',     // collapse repeats
-      requireInteraction: true,  // stays until user dismisses
-    });
+    const reg = swRegistration ||
+      (('serviceWorker' in navigator) ? await navigator.serviceWorker.ready : null);
+    if (reg && reg.showNotification) {
+      await reg.showNotification(title, options);
+      return;
+    }
+  } catch (e) { /* fall through to legacy path */ }
+  // Legacy fallback (file:// origin, no SW support).
+  try {
+    const n = new Notification(title, options);
     n.onclick = () => { try { window.focus(); } catch(e){} n.close(); };
-  } catch (e) { /* file:// origin or other restriction */ }
+  } catch (e) { /* swallow */ }
+}
+
+// Close any timer notification still hanging around. Called when starting a
+// fresh brew (so the previous brew's notif disappears) and at app boot (so
+// stale notifs from a closed app are cleaned up on return).
+async function clearStaleNotifications() {
+  try {
+    const reg = swRegistration ||
+      (('serviceWorker' in navigator) ? await navigator.serviceWorker.ready : null);
+    if (!reg || !reg.getNotifications) return;
+    const ns = await reg.getNotifications({ tag: 'honedtea-timer' });
+    ns.forEach(n => n.close());
+  } catch (e) { /* ignore */ }
 }
 
 function askNotifPermission() {
@@ -1440,6 +1492,7 @@ function renderNotifStatus() {
 function startCooling() {
   if (!currentBrew) return;
   ensureAudio();
+  clearStaleNotifications();   // drop the previous brew's notif, if any
   acquireWakeLock();
 
   const totalSec = coolingTime(
@@ -2103,12 +2156,36 @@ document.getElementById('btnBackCalibration').addEventListener('click', () => re
 document.addEventListener('touchstart', () => {}, { passive: true });
 
 /* =====================================================
+ *  SERVICE WORKER REGISTRATION (PWA)
+ * ===================================================== */
+
+// Holds the active ServiceWorkerRegistration once available. systemNotify()
+// and clearStaleNotifications() both fall back to navigator.serviceWorker.ready
+// while this is still null (early boot), so the timing is safe.
+let swRegistration = null;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    swRegistration = reg;
+  }).catch(() => { /* unsupported origin (file://) or registration failed */ });
+
+  // When a new SW takes control after an update, reload once so the page
+  // picks up freshly-cached assets without the user having to refresh manually.
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+}
+
+/* =====================================================
  *  INIT
  * ===================================================== */
 
 renderMeta();
 renderHome();
 show('home');
+clearStaleNotifications();  // wipe any timer notif left over from a previous session
 </script>
 </body>
 </html>
