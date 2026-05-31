@@ -109,8 +109,8 @@ Single-file SPA. State is held in module-level variables. Views are `<main>` ele
 
 - `view-home`: tea categories drawer + custom teas list + history/settings/about buttons
 - `view-setup`: confirm tea, pick container, set volume, see cooling estimate + computed leaf grams (CIBLE / INFUSION / FEUILLES), start
-- `view-cooling`: phase 1 timer (waiting for water to cool in kettle), shows estimated current temp, has -30s / abort / skip
-- `view-steeping`: phase 2 timer (actual infusion), has -15s / abort / done
+- `view-cooling`: phase 1 timer (waiting for water to cool in kettle), shows estimated current temp, has -30s / +30s / abort / pause / skip
+- `view-steeping`: phase 2 timer (actual infusion), has -15s / +15s / abort / pause / done
 - `view-done`: end-of-brew rating screen (TROP AMER / PARFAIT / FADE), logs to history, or skip back to home
 - `view-settings`: ambient temp slider, kettle diameter slider, alpha slider, containers CRUD, link to calibration page, export / import / reset
 - `view-calibration`: dedicated page for computing alpha from one thermometer measurement
@@ -138,7 +138,9 @@ JSON export (`exportData`) dumps all four keys plus `exportedAt`. JSON import (`
 
 Both timers use `requestAnimationFrame` driven by `Date.now()` deltas, NOT `setInterval` increments. This means the timer stays accurate even if the tab is backgrounded, the device sleeps, or rendering is paused. The displayed time recomputes from `startedAt` on every tick.
 
-Wake Lock is reacquired on `visibilitychange` if the page comes back to foreground during an active timer.
+Wake Lock is reacquired on `visibilitychange` if the page comes back to foreground during an active timer, **unless the timer is paused**, in which case the screen is allowed to sleep.
+
+**Skip / extend / pause**: the `shiftTimer(deltaMs)` helper mutates `timerState.startedAt` to move the perceived elapsed time. A positive delta skips ahead (less remaining), a negative delta rewinds (more remaining). After the alarm has fired, a negative shift resets `timerState.fired`, clears the post-alarm UI (red display, title flash), cancels the pending `endTimeoutId` (steeping's 1.5s grace before `finishBrew`), and restarts the rAF loop if needed. `togglePause()` captures `pausedAt`, cancels the rAF + `endTimeoutId`, releases the Wake Lock, and flips the button label to `REPRENDRE` (warm-tinted). Resume reattaches the rAF and re-acquires the Wake Lock, with `startedAt` shifted forward by the pause duration so it doesn't count.
 
 ### Audio / vibration
 

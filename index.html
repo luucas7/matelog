@@ -575,9 +575,13 @@
     </div>
     <div class="timer-progress"><div class="timer-progress-fill" id="coolProgress"></div></div>
     <div class="ascii" id="coolAscii"></div>
-    <div class="btn-row-3" style="margin-top:24px;">
+    <div class="btn-row" style="margin-top:24px;">
       <button class="btn ghost" id="btnCoolMinus">-30S</button>
+      <button class="btn ghost" id="btnCoolPlus">+30S</button>
+    </div>
+    <div class="btn-row-3" style="margin-top:8px;">
       <button class="btn alert" id="btnCoolAbort">STOP</button>
+      <button class="btn ghost" id="btnCoolPause">PAUSE</button>
       <button class="btn cool" id="btnCoolSkip">PRET</button>
     </div>
     <div class="info" style="margin-top:24px;">
@@ -596,9 +600,13 @@
       INFUSE A <span class="now" id="steepTemp">--</span>&deg;C
     </div>
     <div class="timer-progress"><div class="timer-progress-fill" id="steepProgress"></div></div>
-    <div class="btn-row-3" style="margin-top:24px;">
+    <div class="btn-row" style="margin-top:24px;">
       <button class="btn ghost" id="btnSteepMinus">-15S</button>
+      <button class="btn ghost" id="btnSteepPlus">+15S</button>
+    </div>
+    <div class="btn-row-3" style="margin-top:8px;">
       <button class="btn alert" id="btnSteepAbort">STOP</button>
+      <button class="btn ghost" id="btnSteepPause">PAUSE</button>
       <button class="btn warm" id="btnSteepDone">FINI</button>
     </div>
   </div>
@@ -1335,10 +1343,11 @@ function releaseWakeLock() {
   if (wakeLock) { try { wakeLock.release(); } catch(e){} wakeLock = null; }
 }
 
-// Re-acquire wake lock + stop title flash when the tab regains focus
+// Re-acquire wake lock + stop title flash when the tab regains focus.
+// Skip wake lock if the timer is currently paused: screen sleep is OK then.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    if (timerState) acquireWakeLock();
+    if (timerState && !timerState.paused) acquireWakeLock();
     stopTitleFlash();
   }
 });
@@ -1519,10 +1528,13 @@ function startCooling() {
     startedAt: Date.now(),
     totalSec: totalSec,
     fired: false,
+    paused: false,
+    pausedAt: null,
   };
 
   document.getElementById('coolTeaName').textContent = currentBrew.tea.name;
   document.getElementById('coolTargetTemp').textContent = currentBrew.tea.temp;
+  syncPauseLabels();
   show('cooling');
   tickCooling();
 }
@@ -1575,7 +1587,10 @@ function startSteeping() {
     startedAt: Date.now(),
     totalSec: currentBrew.time,
     fired: false,
+    paused: false,
+    pausedAt: null,
   };
+  syncPauseLabels();
 
   const steepLabel = currentBrew.presetLabel
     ? currentBrew.tea.name + ' [' + currentBrew.presetLabel + ']'
@@ -1598,8 +1613,10 @@ function tickSteeping() {
     timerState.fired = true;
     alarm();
     document.getElementById('steepDisplay').style.color = 'var(--alert)';
-    setTimeout(() => {
+    // Track the post-alarm delay so abort/extend can cancel it cleanly.
+    timerState.endTimeoutId = setTimeout(() => {
       document.getElementById('steepDisplay').style.color = '';
+      if (timerState) timerState.endTimeoutId = null;
       finishBrew();
     }, 1500);
   } else {
@@ -1609,17 +1626,93 @@ function tickSteeping() {
 
 function finishBrew() {
   stopCoolingLoop();
-  if (timerState && timerState.rafId) cancelAnimationFrame(timerState.rafId);
+  if (timerState) {
+    if (timerState.rafId) cancelAnimationFrame(timerState.rafId);
+    if (timerState.endTimeoutId) clearTimeout(timerState.endTimeoutId);
+  }
   releaseWakeLock();
   timerState = null;
   show('done');
 }
 
 function abortTimer() {
-  if (timerState && timerState.rafId) cancelAnimationFrame(timerState.rafId);
+  if (timerState) {
+    if (timerState.rafId) cancelAnimationFrame(timerState.rafId);
+    if (timerState.endTimeoutId) clearTimeout(timerState.endTimeoutId);
+  }
   releaseWakeLock();
   timerState = null;
   show('home');
+}
+
+/* ---------- PAUSE / EXTEND ---------- */
+
+// Shift the running timer by `deltaMs`. Negative = skip forward (timer ends
+// sooner), positive = rewind (timer ends later). After expiry, a positive
+// shift clears the fired flag and the alert UI so the alarm can re-trigger.
+function shiftTimer(deltaMs) {
+  if (!timerState) return;
+  timerState.startedAt -= deltaMs;
+  if (deltaMs < 0 && timerState.fired) {
+    // We just bought ourselves more time after the alarm had fired: reset.
+    timerState.fired = false;
+    stopTitleFlash();
+    if (timerState.endTimeoutId) {
+      clearTimeout(timerState.endTimeoutId);
+      timerState.endTimeoutId = null;
+    }
+    const cd = document.getElementById('coolDisplay');
+    const sd = document.getElementById('steepDisplay');
+    if (cd) cd.style.color = '';
+    if (sd) sd.style.color = '';
+    // Steeping stops its rAF after firing. Restart it so the display animates.
+    if (!timerState.paused && !timerState.rafId) {
+      if (timerState.phase === 'cooling') tickCooling();
+      else if (timerState.phase === 'steeping') tickSteeping();
+    }
+  }
+}
+
+function togglePause() {
+  if (!timerState) return;
+  if (timerState.paused) {
+    // Resume: discount the time spent paused so the deadline shifts forward.
+    timerState.startedAt += Date.now() - timerState.pausedAt;
+    timerState.paused = false;
+    timerState.pausedAt = null;
+    syncPauseLabels();
+    acquireWakeLock();
+    if (timerState.phase === 'cooling') tickCooling();
+    else if (timerState.phase === 'steeping') tickSteeping();
+  } else {
+    timerState.paused = true;
+    timerState.pausedAt = Date.now();
+    if (timerState.rafId) {
+      cancelAnimationFrame(timerState.rafId);
+      timerState.rafId = null;
+    }
+    if (timerState.endTimeoutId) {
+      clearTimeout(timerState.endTimeoutId);
+      timerState.endTimeoutId = null;
+    }
+    // Let the screen sleep while paused: the user has explicitly stepped away.
+    releaseWakeLock();
+    syncPauseLabels();
+  }
+}
+
+function syncPauseLabels() {
+  const lbl = (timerState && timerState.paused) ? 'REPRENDRE' : 'PAUSE';
+  const a = document.getElementById('btnCoolPause');
+  const b = document.getElementById('btnSteepPause');
+  if (a) a.textContent = lbl;
+  if (b) b.textContent = lbl;
+  // Tint the button while paused so it stands out.
+  [a, b].forEach(btn => {
+    if (!btn) return;
+    if (timerState && timerState.paused) btn.classList.add('warm');
+    else btn.classList.remove('warm');
+  });
 }
 
 /* =====================================================
@@ -2109,16 +2202,24 @@ document.getElementById('btnStart').addEventListener('click', () => {
 });
 
 document.getElementById('btnCoolMinus').addEventListener('click', () => {
-  if (timerState && timerState.phase === 'cooling') timerState.startedAt -= 30000;
+  if (timerState && timerState.phase === 'cooling') shiftTimer(30000);
 });
+document.getElementById('btnCoolPlus').addEventListener('click', () => {
+  if (timerState && timerState.phase === 'cooling') shiftTimer(-30000);
+});
+document.getElementById('btnCoolPause').addEventListener('click', togglePause);
 document.getElementById('btnCoolSkip').addEventListener('click', () => startSteeping());
 document.getElementById('btnCoolAbort').addEventListener('click', () => {
   if (confirm('Annuler ?')) abortTimer();
 });
 
 document.getElementById('btnSteepMinus').addEventListener('click', () => {
-  if (timerState && timerState.phase === 'steeping') timerState.startedAt -= 15000;
+  if (timerState && timerState.phase === 'steeping') shiftTimer(15000);
 });
+document.getElementById('btnSteepPlus').addEventListener('click', () => {
+  if (timerState && timerState.phase === 'steeping') shiftTimer(-15000);
+});
+document.getElementById('btnSteepPause').addEventListener('click', togglePause);
 document.getElementById('btnSteepDone').addEventListener('click', () => finishBrew());
 document.getElementById('btnSteepAbort').addEventListener('click', () => {
   if (confirm('Annuler ?')) abortTimer();
