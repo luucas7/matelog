@@ -641,6 +641,11 @@
         <input type="range" id="settingAmb" min="5" max="35" step="1">
         <div class="slider-val"><span id="settingAmbVal">--</span>&deg;C</div>
       </div>
+      <button class="btn ghost" id="btnDetectAmb" style="margin-top:8px;">DETECTER AUTO</button>
+      <div id="detectAmbStatus" style="font-size:11px; color:var(--fg-dim); margin-top:6px; min-height:14px;"></div>
+      <div style="font-size:11px; color:var(--fg-dim); margin-top:4px; line-height:1.5;">
+        Geoloc + meteo exterieure (Open-Meteo). Approximation : si tu chauffes ou climatises, l'ecart peut etre de 5 a 10&deg;C, ajuste manuellement.
+      </div>
     </div>
   </div>
 
@@ -1822,11 +1827,94 @@ function saveTeaForm() {
  *  SETTINGS
  * ===================================================== */
 
+/**
+ * Auto-detect ambient temperature via geolocation + Open-Meteo.
+ *
+ * Important caveat (also shown in UI): the API returns OUTDOOR temperature,
+ * which is a poor proxy for INDOOR temperature where brewing happens. This
+ * was the reason auto-detect was originally rejected. Re-enabled at user
+ * request with explicit disclaimer.
+ *
+ * No API key required, no rate limits for casual use.
+ */
+async function detectAmbientTemp() {
+  const btn    = document.getElementById('btnDetectAmb');
+  const status = document.getElementById('detectAmbStatus');
+  if (!btn || !status) return;
+
+  if (!('geolocation' in navigator)) {
+    status.textContent = 'GEOLOCATION NON SUPPORTEE.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+  status.textContent = 'LOCALISATION EN COURS...';
+
+  // Step 1: geolocation
+  let pos;
+  try {
+    pos = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        timeout: 10000,
+        maximumAge: 5 * 60 * 1000,   // accept cached fix up to 5 min old
+        enableHighAccuracy: false,    // city-level precision is fine for weather
+      });
+    });
+  } catch (e) {
+    const denied = e && e.code === 1;
+    status.textContent = denied
+      ? 'PERMISSION REFUSEE. AUTORISE LA LOCALISATION POUR DETECTER.'
+      : 'LOCALISATION INDISPONIBLE (TIMEOUT OU ERREUR).';
+    btn.disabled = false;
+    btn.style.opacity = '';
+    return;
+  }
+
+  // Step 2: weather fetch
+  status.textContent = 'METEO EN COURS...';
+  const lat = pos.coords.latitude.toFixed(3);
+  const lon = pos.coords.longitude.toFixed(3);
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
+              '&longitude=' + lon + '&current=temperature_2m';
+
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const temp = data && data.current && data.current.temperature_2m;
+    if (typeof temp !== 'number' || !isFinite(temp)) {
+      throw new Error('reponse invalide');
+    }
+    // Clamp to slider range; round to nearest int.
+    const clamped = Math.max(5, Math.min(35, Math.round(temp)));
+    settings.ambientTemp = clamped;
+    saveAll();
+
+    // Sync UI: slider, label, header meta.
+    const amb = document.getElementById('settingAmb');
+    if (amb) amb.value = clamped;
+    const lbl = document.getElementById('settingAmbVal');
+    if (lbl) lbl.textContent = clamped;
+    renderMeta();
+
+    const raw = temp.toFixed(1);
+    status.textContent = 'DETECTE : ' + clamped + '°C (EXT. ' + raw + '°C).';
+  } catch (e) {
+    status.textContent = 'ECHEC METEO : ' + (e && e.message ? e.message : 'inconnu');
+  }
+  btn.disabled = false;
+  btn.style.opacity = '';
+}
+
 function renderSettings() {
   // Ambient
   const amb = document.getElementById('settingAmb');
   amb.value = settings.ambientTemp;
   document.getElementById('settingAmbVal').textContent = settings.ambientTemp;
+  // Clear any stale auto-detect status from a previous open.
+  const detectStatus = document.getElementById('detectAmbStatus');
+  if (detectStatus) detectStatus.textContent = '';
   amb.oninput = () => {
     settings.ambientTemp = parseInt(amb.value, 10);
     document.getElementById('settingAmbVal').textContent = settings.ambientTemp;
@@ -2249,6 +2337,7 @@ document.getElementById('importFile').addEventListener('change', (e) => {
 });
 document.getElementById('btnReset').addEventListener('click', resetAll);
 document.getElementById('btnNotifAsk').addEventListener('click', askNotifPermission);
+document.getElementById('btnDetectAmb').addEventListener('click', detectAmbientTemp);
 document.getElementById('btnCalibrate').addEventListener('click', calibrateAlpha);
 document.getElementById('btnGoCalibrate').addEventListener('click', renderCalibration);
 document.getElementById('btnBackCalibration').addEventListener('click', () => renderSettings());

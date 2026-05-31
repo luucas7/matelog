@@ -25,7 +25,7 @@ These are non-negotiable unless the user explicitly changes them.
 4. **Kettle**: fixed at 100C. No variable temperature.
 5. **Receiving container**: list-based, user-selectable. Default container is "THERMOS" at 450ml. Container choice does NOT affect cooling time, only the volume of water the user might want to boil (typically matches container volume, but is independent).
 6. **Volume**: user-editable each session, default to selected container's volume. Volume here means total water boiled in the kettle, which IS what drives the cooling rate.
-7. **Ambient temperature**: default 20C, user-adjustable via slider (5 to 35). Auto-detection via geolocation was rejected because outdoor temp is a poor proxy for indoor temp.
+7. **Ambient temperature**: default 20C, user-adjustable via slider (5 to 35). A `DETECTER AUTO` button in PARAMETRES > ENVIRONNEMENT pulls the geolocation, calls Open-Meteo (no key, no quota) and writes the rounded outdoor temperature back into the slider. The UI explicitly warns that this is the **outdoor** temperature and that heating/AC will shift the real indoor value by 5 to 10 degrees, so manual adjustment is still expected. Re-enabled at user request after previously being rejected.
 8. **Tea library structure**: 12 standard categories preloaded, sorted by temperature ascending. On home screen, only 5 "popular" categories are shown by default (green, oolong, black, mate, herbal). A toggle reveals the remaining 7. Users can also add their own named teas, each linked to a category, with optional notes.
 9. **Bouilloire calibration**: defaults are modifiable (diameter 9cm, alpha 0.010). A dedicated calibration page lets the user input one measurement (volume, time elapsed, measured temperature) and the app inverse-solves Newton to compute exact alpha.
 10. **Notifications**: vibration only at timer end (`navigator.vibrate`, two short buzzes). Audio was disabled at user request because the beep was unpleasant. The tab title also flashes (always on, no permission required) so the alarm is visible from the OS taskbar on desktop. An opt-in system notification via the `Notification` API is available, toggled by a button in PARAMETRES > NOTIFICATIONS; this works on `https://` and `localhost`, on `file://` only Firefox honors it. No toast, no popup beyond the visual timer turning red.
@@ -229,6 +229,5 @@ Default container: `{ id: 'thermos', name: 'THERMOS', volume: 450 }`.
 - Do NOT introduce a build step. The user explicitly wanted something he can put as a browser bookmark.
 - Do NOT switch to React or any framework.
 - Do NOT use em-dashes anywhere.
-- Do NOT auto-detect ambient temp from outdoor weather. This was discussed and rejected.
 - Do NOT add cloud sync or accounts. Local only.
 - Do NOT add ads, trackers, or telemetry of any kind.
